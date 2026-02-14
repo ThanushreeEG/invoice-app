@@ -12,9 +12,8 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@prisma/adapter-better-sqlite3": "^7.4.0",
+    "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",
-    "better-sqlite3": "^12.6.2",
     "date-fns": "^4.1.0",
     "next": "16.1.6",
     "nodemailer": "^8.0.1",
@@ -27,7 +26,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.9",
     "@types/pdfmake": "^0.3.1",
