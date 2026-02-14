@@ -1,0 +1,45 @@
+{
+  "name": "invoice-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@prisma/adapter-better-sqlite3": "^7.4.0",
+    "@prisma/client": "^7.4.0",
+    "better-sqlite3": "^12.6.2",
+    "date-fns": "^4.1.0",
+    "next": "16.1.6",
+    "nodemailer": "^8.0.1",
+    "pdfmake": "^0.3.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-hot-toast": "^2.6.0",
+    "react-signature-canvas": "^1.1.0-alpha.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/nodemailer": "^7.0.9",
+    "@types/pdfmake": "^0.3.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/react-signature-canvas": "^1.0.7",
+    "dotenv": "^17.3.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "prisma": "^7.4.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.0.18"
+  }
+}

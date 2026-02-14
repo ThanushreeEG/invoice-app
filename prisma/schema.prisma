@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Sender {
+  id              String    @id @default(cuid())
+  name            String
+  gstNumber       String    @default("")
+  nextInvoiceNum  Int       @default(1)
+  signature       String    @default("")
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  invoices        Invoice[]
+}
+
+model Building {
+  id        String    @id @default(cuid())
+  name      String
+  address   String    @default("")
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  invoices  Invoice[]
+}
+
+model Tenant {
+  id              String    @id @default(cuid())
+  name            String
+  email           String
+  phone           String    @default("")
+  propertyAddress String
+  gstNumber       String    @default("")
+  defaultRent     Float     @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  invoices        Invoice[]
+}
+
+model Invoice {
+  id              String    @id @default(cuid())
+  invoiceNumber   String    @unique
+  senderId        String
+  sender          Sender    @relation(fields: [senderId], references: [id])
+  buildingId      String    @default("")
+  building        Building? @relation(fields: [buildingId], references: [id])
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoiceDate     DateTime  @default(now())
+  month           String
+  year            Int
+  description     String    @default("Amount Charged towards rental of the premises")
+  baseRent        Float
+  cgstRate        Float     @default(9.0)
+  sgstRate        Float     @default(9.0)
+  cgstAmount      Float
+  sgstAmount      Float
+  totalAmount     Float
+  status          String    @default("DRAFT")
+  sentAt          DateTime?
+  pdfPath         String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Settings {
+  id              String   @id @default("default")
+  senderPhone     String   @default("")
+  senderEmail     String   @default("")
+  smtpHost        String   @default("smtp.gmail.com")
+  smtpPort        Int      @default(587)
+  smtpUser        String   @default("")
+  smtpPass        String   @default("")
+  paymentTerms    String   @default("Payment due within 15 days of invoice date.")
+  bankDetails     String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
