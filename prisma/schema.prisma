@@ -32,7 +32,8 @@ model Building {
 model Tenant {
   id              String    @id @default(cuid())
   name            String
-  email           String
+  email           String    @default("")
+  ccEmails        String    @default("")
   phone           String    @default("")
   propertyAddress String
   gstNumber       String    @default("")

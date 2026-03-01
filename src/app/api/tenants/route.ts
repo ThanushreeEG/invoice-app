@@ -26,6 +26,7 @@ export async function POST(request: Request) {
     data: {
       name: data.name,
       email: data.email,
+      ccEmails: data.ccEmails,
       phone: data.phone,
       propertyAddress: data.propertyAddress,
       gstNumber: data.gstNumber,

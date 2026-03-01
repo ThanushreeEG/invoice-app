@@ -58,6 +58,23 @@ export async function POST(request: Request) {
       continue;
     }
 
+    if (!invoice.tenant.email && !invoice.tenant.ccEmails) {
+      results.push({
+        invoiceId,
+        invoiceNumber: invoice.invoiceNumber,
+        tenantName: invoice.tenant.name,
+        success: false,
+        error: "No email address",
+      });
+      continue;
+    }
+
+    // If no primary email but CC emails exist, use first CC as "to"
+    const toEmail = invoice.tenant.email || invoice.tenant.ccEmails.split(",")[0].trim();
+    const ccEmail = invoice.tenant.email
+      ? (invoice.tenant.ccEmails || undefined)
+      : invoice.tenant.ccEmails.split(",").slice(1).map((e: string) => e.trim()).filter(Boolean).join(", ") || undefined;
+
     try {
       const pdfBuffer = await generateInvoicePDF({
         senderName: invoice.sender.name,
@@ -89,7 +106,8 @@ export async function POST(request: Request) {
           smtpPass: decryptedPass,
           senderName: invoice.sender.name,
         },
-        to: invoice.tenant.email,
+        to: toEmail,
+        cc: ccEmail,
         tenantName: invoice.tenant.name,
         invoiceNumber: invoice.invoiceNumber,
         totalAmount: formatCurrency(invoice.totalAmount),

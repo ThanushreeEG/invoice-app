@@ -10,6 +10,7 @@ export default function NewTenantPage() {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    ccEmails: "",
     phone: "",
     propertyAddress: "",
     gstNumber: "",
@@ -18,8 +19,8 @@ export default function NewTenantPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.propertyAddress) {
-      toast.error("Please fill in name, email, and property address.");
+    if (!form.name || !form.propertyAddress) {
+      toast.error("Please fill in name and property address.");
       return;
     }
 
@@ -67,14 +68,31 @@ export default function NewTenantPage() {
             </div>
 
             <div>
-              <label className={labelClass}>Email *</label>
+              <label className={labelClass}>Email</label>
               <input
-                type="email"
+                type="text"
                 className={inputClass}
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="tenant@company.com"
               />
+              <p className="text-xs text-gray-400 mt-1">
+                Optional — leave blank if tenant prefers WhatsApp
+              </p>
+            </div>
+
+            <div>
+              <label className={labelClass}>Additional Emails (CC)</label>
+              <input
+                type="text"
+                className={inputClass}
+                value={form.ccEmails}
+                onChange={(e) => setForm({ ...form, ccEmails: e.target.value })}
+                placeholder="person1@co.com, person2@co.com"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Comma-separated, e.g. person1@co.com, person2@co.com
+              </p>
             </div>
 
             <div>

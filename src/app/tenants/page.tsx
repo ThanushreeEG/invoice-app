@@ -9,6 +9,7 @@ interface Tenant {
   id: string;
   name: string;
   email: string;
+  ccEmails: string;
   phone: string;
   propertyAddress: string;
   gstNumber: string;
@@ -89,7 +90,16 @@ export default function TenantsPage() {
                   <h3 className="text-lg font-semibold text-gray-800">
                     {tenant.name}
                   </h3>
-                  <p className="text-sm text-gray-600">{tenant.email}</p>
+                  <p className="text-sm text-gray-600">
+                    {tenant.email || (!tenant.ccEmails ? "No email — PDF only" : "")}
+                    {tenant.email && tenant.ccEmails ? ` (+${tenant.ccEmails.split(",").filter((e) => e.trim()).length} CC)` : ""}
+                    {!tenant.email && tenant.ccEmails && (() => {
+                      const ccList = tenant.ccEmails.split(",").filter((e) => e.trim());
+                      return ccList.length === 1
+                        ? ccList[0].trim()
+                        : `${ccList[0].trim()} (+${ccList.length - 1} more)`;
+                    })()}
+                  </p>
                   <p className="text-sm text-gray-500 mt-1">
                     {tenant.propertyAddress}
                   </p>

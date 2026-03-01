@@ -9,11 +9,19 @@ const MONTHS = [
 
 export const createTenantSchema = z.object({
   name: z.string().min(1, "Name is required.").max(200),
-  email: z.string().email("Invalid email address."),
+  email: z.string().email("Invalid email address.").or(z.literal("")).optional().default(""),
   phone: z.string().max(20).optional().default(""),
   propertyAddress: z.string().min(1, "Property address is required.").max(500),
   gstNumber: z.string().max(50).optional().default(""),
   defaultRent: z.coerce.number().min(0).optional().default(0),
+  ccEmails: z.string().max(500).optional().default("")
+    .refine((val) => {
+      if (!val) return true;
+      return val.split(",").every((e) => {
+        const trimmed = e.trim();
+        return trimmed === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+      });
+    }, "One or more CC email addresses are invalid."),
 });
 
 export const updateTenantSchema = createTenantSchema.partial();

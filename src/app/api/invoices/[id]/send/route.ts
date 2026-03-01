@@ -54,6 +54,19 @@ export async function POST(
     totalAmount: invoice.totalAmount,
   });
 
+  if (!invoice.tenant.email && !invoice.tenant.ccEmails) {
+    return NextResponse.json(
+      { error: "No email addresses configured for this tenant." },
+      { status: 400 }
+    );
+  }
+
+  // If no primary email but CC emails exist, use first CC as "to"
+  const toEmail = invoice.tenant.email || invoice.tenant.ccEmails.split(",")[0].trim();
+  const ccEmail = invoice.tenant.email
+    ? (invoice.tenant.ccEmails || undefined)
+    : invoice.tenant.ccEmails.split(",").slice(1).map((e: string) => e.trim()).filter(Boolean).join(", ") || undefined;
+
   try {
     await sendInvoiceEmail({
       settings: {
@@ -63,7 +76,8 @@ export async function POST(
         smtpPass: decrypt(settings.smtpPass),
         senderName: invoice.sender.name,
       },
-      to: invoice.tenant.email,
+      to: toEmail,
+      cc: ccEmail,
       tenantName: invoice.tenant.name,
       invoiceNumber: invoice.invoiceNumber,
       totalAmount: formatCurrency(invoice.totalAmount),

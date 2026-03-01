@@ -11,6 +11,7 @@ interface EmailSettings {
 interface SendInvoiceEmailParams {
   settings: EmailSettings;
   to: string;
+  cc?: string;
   tenantName: string;
   invoiceNumber: string;
   totalAmount: string;
@@ -22,6 +23,7 @@ interface SendInvoiceEmailParams {
 export async function sendInvoiceEmail({
   settings,
   to,
+  cc,
   tenantName,
   invoiceNumber,
   totalAmount,
@@ -42,6 +44,7 @@ export async function sendInvoiceEmail({
   const info = await transporter.sendMail({
     from: `"${settings.senderName}" <${settings.smtpUser}>`,
     to,
+    ...(cc ? { cc } : {}),
     subject: `Rent Invoice No.${invoiceNumber} - ${month} ${year}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px;">

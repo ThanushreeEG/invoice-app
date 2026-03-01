@@ -24,7 +24,8 @@ export async function PUT(
     where: { id },
     data: {
       name: body.name,
-      email: body.email,
+      email: body.email || "",
+      ccEmails: body.ccEmails || "",
       phone: body.phone || "",
       propertyAddress: body.propertyAddress,
       gstNumber: body.gstNumber || "",
