@@ -182,6 +182,56 @@ export default function NewInvoicePage() {
     setSendProgress("");
   };
 
+  const handleDownloadPDF = async () => {
+    setSending(true);
+    try {
+      setSendProgress("Creating invoices...");
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderId: selectedSenderId,
+          buildingId: selectedBuildingId,
+          tenants: selected.map((s) => ({
+            tenantId: s.tenantId,
+            baseRent: s.baseRent,
+            description: s.description,
+            invoiceNumber: s.invoiceNumber,
+            month,
+            year,
+          })),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to create invoices.");
+        setSending(false);
+        setSendProgress("");
+        return;
+      }
+
+      const invoices = await res.json();
+      setSendProgress("Downloading PDFs...");
+
+      for (const inv of invoices) {
+        const link = document.createElement("a");
+        link.href = `/api/invoices/${inv.id}/pdf`;
+        link.download = `Invoice-${inv.invoiceNumber}.pdf`;
+        link.click();
+        // Small delay between downloads so browser handles them
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      toast.success(`${invoices.length} invoice(s) saved & PDF(s) downloaded!`);
+      router.push("/invoices");
+    } catch {
+      toast.error("Failed to download PDFs.");
+    }
+    setSending(false);
+    setSendProgress("");
+  };
+
   const handleSaveDraft = async () => {
     setSending(true);
     try {
@@ -669,6 +719,13 @@ export default function NewInvoicePage() {
               className="px-6 py-4 bg-gray-600 text-white text-lg font-semibold rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
               Save Draft
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={sending}
+              className="px-6 py-4 bg-purple-600 text-white text-lg font-semibold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50"
+            >
+              {sending && sendProgress.includes("PDF") ? "Downloading..." : "Download PDF"}
             </button>
             <button
               onClick={handleSend}
