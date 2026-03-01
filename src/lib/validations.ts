@@ -14,6 +14,7 @@ export const createTenantSchema = z.object({
   propertyAddress: z.string().min(1, "Property address is required.").max(500),
   gstNumber: z.string().max(50).optional().default(""),
   defaultRent: z.coerce.number().min(0).optional().default(0),
+  defaultDescription: z.string().max(500).optional().default("Amount Charged towards rental of the premises"),
   ccEmails: z.string().max(500).optional().default("")
     .refine((val) => {
       if (!val) return true;

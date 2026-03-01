@@ -30,6 +30,7 @@ export async function PUT(
       propertyAddress: body.propertyAddress,
       gstNumber: body.gstNumber || "",
       defaultRent: body.defaultRent ? parseFloat(body.defaultRent) : 0,
+      defaultDescription: body.defaultDescription || "Amount Charged towards rental of the premises",
     },
   });
 

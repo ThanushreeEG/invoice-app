@@ -21,6 +21,7 @@ export default function EditTenantPage({
     propertyAddress: "",
     gstNumber: "",
     defaultRent: "",
+    defaultDescription: "",
   });
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function EditTenantPage({
           propertyAddress: data.propertyAddress,
           gstNumber: data.gstNumber || "",
           defaultRent: data.defaultRent?.toString() || "",
+          defaultDescription: data.defaultDescription || "Amount Charged towards rental of the premises",
         });
         setLoading(false);
       })
@@ -159,6 +161,22 @@ export default function EditTenantPage({
                   setForm({ ...form, gstNumber: e.target.value })
                 }
               />
+            </div>
+
+            <div>
+              <label className={labelClass}>Default Invoice Description</label>
+              <input
+                type="text"
+                className={inputClass}
+                value={form.defaultDescription}
+                onChange={(e) =>
+                  setForm({ ...form, defaultDescription: e.target.value })
+                }
+                placeholder="Amount Charged towards rental of the premises"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                This will appear under &quot;Particulars&quot; in invoices.
+              </p>
             </div>
 
             <div>

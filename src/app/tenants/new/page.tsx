@@ -15,6 +15,7 @@ export default function NewTenantPage() {
     propertyAddress: "",
     gstNumber: "",
     defaultRent: "",
+    defaultDescription: "Amount Charged towards rental of the premises",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,6 +130,22 @@ export default function NewTenantPage() {
                 }
                 placeholder="29AACCH0615F1ZY"
               />
+            </div>
+
+            <div>
+              <label className={labelClass}>Default Invoice Description</label>
+              <input
+                type="text"
+                className={inputClass}
+                value={form.defaultDescription}
+                onChange={(e) =>
+                  setForm({ ...form, defaultDescription: e.target.value })
+                }
+                placeholder="Amount Charged towards rental of the premises"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                This will appear under &quot;Particulars&quot; in invoices.
+              </p>
             </div>
 
             <div>

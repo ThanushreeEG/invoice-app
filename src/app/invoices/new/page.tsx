@@ -27,6 +27,7 @@ interface Tenant {
   propertyAddress: string;
   gstNumber: string;
   defaultRent: number;
+  defaultDescription: string;
 }
 
 interface TenantInvoice {
@@ -86,7 +87,7 @@ export default function NewInvoicePage() {
           tenantId: tenant.id,
           tenant,
           baseRent: tenant.defaultRent || 0,
-          description: "Amount Charged towards rental of the premises",
+          description: tenant.defaultDescription || "Amount Charged towards rental of the premises",
           invoiceNumber: "",
         },
       ]);
@@ -102,7 +103,7 @@ export default function NewInvoicePage() {
           tenantId: t.id,
           tenant: t,
           baseRent: t.defaultRent || 0,
-          description: "Amount Charged towards rental of the premises",
+          description: t.defaultDescription || "Amount Charged towards rental of the premises",
           invoiceNumber: "",
         }))
       );
@@ -462,6 +463,26 @@ export default function NewInvoicePage() {
                         placeholder="Enter rent amount"
                       />
                     </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Particulars (Description)
+                    </label>
+                    <input
+                      type="text"
+                      value={item.description}
+                      onChange={(e) =>
+                        setSelected(
+                          selected.map((s) =>
+                            s.tenantId === item.tenantId
+                              ? { ...s, description: e.target.value }
+                              : s
+                          )
+                        )
+                      }
+                      className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
 
                   {item.baseRent > 0 && (

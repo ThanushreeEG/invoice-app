@@ -31,6 +31,7 @@ export async function POST(request: Request) {
       propertyAddress: data.propertyAddress,
       gstNumber: data.gstNumber,
       defaultRent: data.defaultRent,
+      defaultDescription: data.defaultDescription,
     },
   });
 
