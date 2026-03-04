@@ -47,7 +47,7 @@ model Tenant {
 
 model Invoice {
   id              String    @id @default(cuid())
-  invoiceNumber   String    @unique
+  invoiceNumber   String
   senderId        String
   sender          Sender    @relation(fields: [senderId], references: [id])
   buildingId      String    @default("")
