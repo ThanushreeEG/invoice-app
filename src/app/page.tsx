@@ -14,12 +14,21 @@ interface RecentInvoice {
   tenant: { name: string };
 }
 
+interface RecentBill {
+  id: string;
+  month: string;
+  year: number;
+  netPayable: number;
+  status: string;
+  tenant: { name: string };
+}
+
 async function getDashboardData() {
   const now = new Date();
   const currentMonth = now.toLocaleString("en-US", { month: "long" }).toUpperCase();
   const currentYear = now.getFullYear();
 
-  const [totalTenants, allInvoices] = await Promise.all([
+  const [totalTenants, allInvoices, allBills] = await Promise.all([
     prisma.tenant.count({ where: { isActive: true } }),
     prisma.invoice.findMany({
       select: {
@@ -35,10 +44,27 @@ async function getDashboardData() {
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
+    prisma.electricityBill.findMany({
+      select: {
+        id: true,
+        month: true,
+        year: true,
+        netPayable: true,
+        status: true,
+        createdAt: true,
+        tenant: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
   ]);
 
   const thisMonthInvoices = allInvoices.filter(
     (inv: { month: string; year: number }) => inv.month === currentMonth && inv.year === currentYear
+  );
+
+  const thisMonthBills = allBills.filter(
+    (bill: { month: string; year: number }) => bill.month === currentMonth && bill.year === currentYear
   );
 
   return {
@@ -46,11 +72,14 @@ async function getDashboardData() {
     invoicesThisMonth: thisMonthInvoices.length,
     totalBilledThisMonth: thisMonthInvoices.reduce((sum: number, inv: { totalAmount: number }) => sum + inv.totalAmount, 0),
     recentInvoices: allInvoices.slice(0, 5) as RecentInvoice[],
+    ebBillsThisMonth: thisMonthBills.length,
+    totalEbBilledThisMonth: thisMonthBills.reduce((sum: number, bill: { netPayable: number }) => sum + bill.netPayable, 0),
+    recentBills: allBills.slice(0, 5) as RecentBill[],
   };
 }
 
 export default async function DashboardPage() {
-  const { totalTenants, invoicesThisMonth, totalBilledThisMonth, recentInvoices } =
+  const { totalTenants, invoicesThisMonth, totalBilledThisMonth, recentInvoices, ebBillsThisMonth, totalEbBilledThisMonth, recentBills } =
     await getDashboardData();
 
   const statusBadge = (status: string) => {
@@ -73,7 +102,7 @@ export default async function DashboardPage() {
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
           <div className="text-sm text-gray-500">Total Tenants</div>
           <div className="text-3xl font-bold text-gray-800">{totalTenants}</div>
@@ -90,8 +119,22 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Electricity Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <div className="text-sm text-gray-500">EB Bills This Month</div>
+          <div className="text-3xl font-bold text-gray-800">{ebBillsThisMonth}</div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <div className="text-sm text-gray-500">EB Billed This Month</div>
+          <div className="text-3xl font-bold text-orange-600">
+            {formatCurrency(totalEbBilledThisMonth)}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <Link
           href="/invoices/new"
           className="bg-green-600 text-white rounded-xl p-6 text-center hover:bg-green-700 transition-colors shadow-sm"
@@ -99,6 +142,15 @@ export default async function DashboardPage() {
           <div className="text-2xl font-bold mb-1">Create Invoice</div>
           <div className="text-green-100">
             Generate and send invoices to tenants
+          </div>
+        </Link>
+        <Link
+          href="/electricity/new"
+          className="bg-orange-600 text-white rounded-xl p-6 text-center hover:bg-orange-700 transition-colors shadow-sm"
+        >
+          <div className="text-2xl font-bold mb-1">Electricity Bill</div>
+          <div className="text-orange-100">
+            Generate and send electricity bills
           </div>
         </Link>
         <Link
@@ -112,7 +164,7 @@ export default async function DashboardPage() {
 
       {/* Recent Invoices */}
       {recentInvoices.length > 0 && (
-        <div>
+        <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-gray-800">
               Recent Invoices
@@ -152,6 +204,53 @@ export default async function DashboardPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       {statusBadge(inv.status)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Electricity Bills */}
+      {recentBills.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-gray-800">
+              Recent Electricity Bills
+            </h2>
+            <Link
+              href="/electricity"
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            >
+              View All
+            </Link>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 text-sm text-gray-600">
+                  <th className="text-left px-4 py-3 font-semibold" scope="col">Tenant</th>
+                  <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell" scope="col">
+                    Period
+                  </th>
+                  <th className="text-right px-4 py-3 font-semibold" scope="col">Net Payable</th>
+                  <th className="text-center px-4 py-3 font-semibold" scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentBills.map((bill) => (
+                  <tr key={bill.id} className="border-t border-gray-100">
+                    <td className="px-4 py-3 text-sm font-medium">{bill.tenant.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500 hidden sm:table-cell">
+                      {bill.month} {bill.year}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-medium">
+                      {formatCurrency(bill.netPayable)}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {statusBadge(bill.status)}
                     </td>
                   </tr>
                 ))}

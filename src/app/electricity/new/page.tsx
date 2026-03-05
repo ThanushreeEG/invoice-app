@@ -3,16 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { calculateGST } from "@/lib/gst";
-import { formatCurrency, formatInvoiceAmount } from "@/lib/formatCurrency";
-import { amountInWords } from "@/lib/amountInWords";
+import { formatCurrency } from "@/lib/formatCurrency";
 import SendConfirmModal from "@/components/SendConfirmModal";
 
 interface Sender {
   id: string;
   name: string;
-  gstNumber: string;
-  signature: string;
 }
 
 interface Building {
@@ -26,17 +22,23 @@ interface Tenant {
   name: string;
   email: string;
   propertyAddress: string;
-  gstNumber: string;
-  defaultRent: number;
-  defaultDescription: string;
+  elecMultiplier: number;
+  elecMinChargeUnits: number;
+  elecKVA: number;
+  elecBWSSB: number;
+  elecMaintenance: number;
 }
 
-interface TenantInvoice {
+interface TenantBill {
   tenantId: string;
   tenant: Tenant;
-  baseRent: number;
-  description: string;
-  invoiceNumber: string;
+  openingReading: number;
+  closingReading: number;
+  miscUnits: number;
+  ratePerUnit: number;
+  bwssbCharges: number;
+  maintenance: number;
+  hasLastReading: boolean;
 }
 
 const MONTHS = [
@@ -44,7 +46,17 @@ const MONTHS = [
   "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
 ];
 
-export default function NewInvoicePage() {
+function calcBill(item: TenantBill) {
+  const unitsConsumed = Math.max(0, item.closingReading - item.openingReading);
+  const totalUnitsConsumed = unitsConsumed * item.tenant.elecMultiplier;
+  const totalUnitsCharged = totalUnitsConsumed + item.miscUnits;
+  const totalAmount = totalUnitsCharged * item.ratePerUnit;
+  const minimumCharge = item.tenant.elecMinChargeUnits * item.tenant.elecKVA;
+  const netPayable = totalAmount + minimumCharge + item.bwssbCharges + item.maintenance;
+  return { unitsConsumed, totalUnitsConsumed, totalUnitsCharged, totalAmount, minimumCharge, netPayable };
+}
+
+export default function NewElectricityBillPage() {
   const router = useRouter();
   const [senders, setSenders] = useState<Sender[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -52,7 +64,7 @@ export default function NewInvoicePage() {
   const [selectedBuildingId, setSelectedBuildingId] = useState("");
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<TenantInvoice[]>([]);
+  const [selected, setSelected] = useState<TenantBill[]>([]);
   const [month, setMonth] = useState(MONTHS[new Date().getMonth()]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [step, setStep] = useState<"select" | "details" | "preview">("select");
@@ -83,9 +95,6 @@ export default function NewInvoicePage() {
       .catch(() => {});
   }, [selectedBuildingId]);
 
-  const selectedSender = senders.find((s) => s.id === selectedSenderId);
-  const selectedBuilding = buildings.find((b) => b.id === selectedBuildingId);
-
   const toggleTenant = (tenant: Tenant) => {
     const exists = selected.find((s) => s.tenantId === tenant.id);
     if (exists) {
@@ -96,9 +105,13 @@ export default function NewInvoicePage() {
         {
           tenantId: tenant.id,
           tenant,
-          baseRent: tenant.defaultRent || 0,
-          description: tenant.defaultDescription || "Amount Charged towards rental of the premises",
-          invoiceNumber: "",
+          openingReading: 0,
+          closingReading: 0,
+          miscUnits: 0,
+          ratePerUnit: 0,
+          bwssbCharges: tenant.elecBWSSB,
+          maintenance: tenant.elecMaintenance,
+          hasLastReading: false,
         },
       ]);
     }
@@ -112,18 +125,41 @@ export default function NewInvoicePage() {
         tenants.map((t) => ({
           tenantId: t.id,
           tenant: t,
-          baseRent: t.defaultRent || 0,
-          description: t.defaultDescription || "Amount Charged towards rental of the premises",
-          invoiceNumber: "",
+          openingReading: 0,
+          closingReading: 0,
+          miscUnits: 0,
+          ratePerUnit: 0,
+          bwssbCharges: t.elecBWSSB,
+          maintenance: t.elecMaintenance,
+          hasLastReading: false,
         }))
       );
     }
   };
 
-  const updateRent = (tenantId: string, rent: number) => {
+  const goToDetails = async () => {
+    // Fetch last readings for selected tenants
+    const tenantIds = selected.map((s) => s.tenantId).join(",");
+    try {
+      const res = await fetch(`/api/electricity/last-readings?tenantIds=${tenantIds}`);
+      const readings = await res.json();
+      setSelected(
+        selected.map((s) => ({
+          ...s,
+          openingReading: readings[s.tenantId] ?? 0,
+          hasLastReading: readings[s.tenantId] !== undefined,
+        }))
+      );
+    } catch {
+      // Continue without last readings
+    }
+    setStep("details");
+  };
+
+  const updateField = (tenantId: string, field: string, value: number) => {
     setSelected(
       selected.map((s) =>
-        s.tenantId === tenantId ? { ...s, baseRent: rent } : s
+        s.tenantId === tenantId ? { ...s, [field]: value } : s
       )
     );
   };
@@ -132,39 +168,42 @@ export default function NewInvoicePage() {
     setShowSendModal(false);
     setSending(true);
     try {
-      setSendProgress("Creating invoices...");
-      const createRes = await fetch("/api/invoices", {
+      setSendProgress("Creating bills...");
+      const createRes = await fetch("/api/electricity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           senderId: selectedSenderId,
           buildingId: selectedBuildingId,
+          month,
+          year,
           tenants: selected.map((s) => ({
             tenantId: s.tenantId,
-            baseRent: s.baseRent,
-            description: s.description,
-            invoiceNumber: s.invoiceNumber,
-            month,
-            year,
+            openingReading: s.openingReading,
+            closingReading: s.closingReading,
+            miscUnits: s.miscUnits,
+            ratePerUnit: s.ratePerUnit,
+            bwssbCharges: s.bwssbCharges,
+            maintenance: s.maintenance,
           })),
         }),
       });
 
       if (!createRes.ok) {
         const data = await createRes.json();
-        toast.error(data.error || "Failed to create invoices.");
+        toast.error(data.error || "Failed to create bills.");
         setSending(false);
         return;
       }
 
-      const invoices = await createRes.json();
-      const invoiceIds = invoices.map((inv: { id: string }) => inv.id);
+      const bills = await createRes.json();
+      const billIds = bills.map((b: { id: string }) => b.id);
 
-      setSendProgress(`Sending ${invoiceIds.length} email(s)...`);
-      const sendRes = await fetch("/api/invoices/send-bulk", {
+      setSendProgress(`Sending ${billIds.length} email(s)...`);
+      const sendRes = await fetch("/api/electricity/send-bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceIds }),
+        body: JSON.stringify({ billIds }),
       });
 
       const sendData = await sendRes.json();
@@ -176,13 +215,13 @@ export default function NewInvoicePage() {
         const failCount = sendData.results.length - successCount;
 
         if (failCount === 0) {
-          toast.success(`All ${successCount} invoice(s) sent successfully!`);
+          toast.success(`All ${successCount} bill(s) sent successfully!`);
         } else {
           toast.success(`${successCount} sent, ${failCount} failed.`);
         }
-        router.push("/invoices");
+        router.push("/electricity");
       } else {
-        toast.error(sendData.error || "Failed to send invoices.");
+        toast.error(sendData.error || "Failed to send bills.");
       }
     } catch {
       toast.error("Something went wrong. Please try again.");
@@ -194,46 +233,48 @@ export default function NewInvoicePage() {
   const handleDownloadPDF = async () => {
     setSending(true);
     try {
-      setSendProgress("Creating invoices...");
-      const res = await fetch("/api/invoices", {
+      setSendProgress("Creating bills...");
+      const res = await fetch("/api/electricity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           senderId: selectedSenderId,
           buildingId: selectedBuildingId,
+          month,
+          year,
           tenants: selected.map((s) => ({
             tenantId: s.tenantId,
-            baseRent: s.baseRent,
-            description: s.description,
-            invoiceNumber: s.invoiceNumber,
-            month,
-            year,
+            openingReading: s.openingReading,
+            closingReading: s.closingReading,
+            miscUnits: s.miscUnits,
+            ratePerUnit: s.ratePerUnit,
+            bwssbCharges: s.bwssbCharges,
+            maintenance: s.maintenance,
           })),
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        toast.error(data.error || "Failed to create invoices.");
+        toast.error(data.error || "Failed to create bills.");
         setSending(false);
         setSendProgress("");
         return;
       }
 
-      const invoices = await res.json();
+      const bills = await res.json();
       setSendProgress("Downloading PDFs...");
 
-      for (const inv of invoices) {
+      for (const bill of bills) {
         const link = document.createElement("a");
-        link.href = `/api/invoices/${inv.id}/pdf`;
-        link.download = `Invoice-${inv.invoiceNumber}.pdf`;
+        link.href = `/api/electricity/${bill.id}/pdf`;
+        link.download = `Electricity-Bill-${bill.tenant.name}-${month}-${year}.pdf`;
         link.click();
-        // Small delay between downloads so browser handles them
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      toast.success(`${invoices.length} invoice(s) saved & PDF(s) downloaded!`);
-      router.push("/invoices");
+      toast.success(`${bills.length} bill(s) saved & PDF(s) downloaded!`);
+      router.push("/electricity");
     } catch {
       toast.error("Failed to download PDFs.");
     }
@@ -244,32 +285,35 @@ export default function NewInvoicePage() {
   const handleSaveDraft = async () => {
     setSending(true);
     try {
-      const res = await fetch("/api/invoices", {
+      const res = await fetch("/api/electricity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           senderId: selectedSenderId,
           buildingId: selectedBuildingId,
+          month,
+          year,
           tenants: selected.map((s) => ({
             tenantId: s.tenantId,
-            baseRent: s.baseRent,
-            description: s.description,
-            invoiceNumber: s.invoiceNumber,
-            month,
-            year,
+            openingReading: s.openingReading,
+            closingReading: s.closingReading,
+            miscUnits: s.miscUnits,
+            ratePerUnit: s.ratePerUnit,
+            bwssbCharges: s.bwssbCharges,
+            maintenance: s.maintenance,
           })),
         }),
       });
 
       if (res.ok) {
-        toast.success("Invoices saved as drafts!");
-        router.push("/invoices");
+        toast.success("Bills saved as drafts!");
+        router.push("/electricity");
       } else {
         const data = await res.json();
-        toast.error(data.error || "Failed to save invoices.");
+        toast.error(data.error || "Failed to save bills.");
       }
     } catch {
-      toast.error("Failed to save invoices.");
+      toast.error("Failed to save bills.");
     }
     setSending(false);
   };
@@ -282,10 +326,13 @@ export default function NewInvoicePage() {
     );
   }
 
+  const selectedSender = senders.find((s) => s.id === selectedSenderId);
+  const selectedBuilding = buildings.find((b) => b.id === selectedBuildingId);
+
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">
-        Create Invoice
+        Create Electricity Bill
       </h1>
 
       {/* Sender Selection */}
@@ -305,9 +352,6 @@ export default function NewInvoicePage() {
               }`}
             >
               {sender.name}
-              <div className="text-xs font-normal mt-0.5">
-                GST: {sender.gstNumber}
-              </div>
             </button>
           ))}
         </div>
@@ -338,17 +382,12 @@ export default function NewInvoicePage() {
             </button>
           ))}
         </div>
-        {buildings.length === 0 && (
-          <p className="text-gray-500 text-sm">
-            No buildings added. Please add buildings in Settings first.
-          </p>
-        )}
       </div>
 
       {/* Month/Year Selector */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
         <h2 className="text-base font-semibold text-gray-700 mb-3">
-          Invoice Period
+          Bill Period
         </h2>
         <div className="flex gap-3">
           <select
@@ -369,9 +408,6 @@ export default function NewInvoicePage() {
             className="w-28 px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <p className="text-xs text-gray-400 mt-2">
-          Invoice date will be set to 01/{String(MONTHS.indexOf(month) + 1).padStart(2, "0")}/{year}
-        </p>
       </div>
 
       {/* Step 1: Select Tenants */}
@@ -386,9 +422,7 @@ export default function NewInvoicePage() {
                 onClick={selectAll}
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
-                {selected.length === tenants.length
-                  ? "Deselect All"
-                  : "Select All"}
+                {selected.length === tenants.length ? "Deselect All" : "Select All"}
               </button>
             </div>
 
@@ -399,9 +433,7 @@ export default function NewInvoicePage() {
             ) : (
               <div className="space-y-2">
                 {tenants.map((tenant) => {
-                  const isSelected = selected.some(
-                    (s) => s.tenantId === tenant.id
-                  );
+                  const isSelected = selected.some((s) => s.tenantId === tenant.id);
                   return (
                     <button
                       key={tenant.id}
@@ -421,32 +453,17 @@ export default function NewInvoicePage() {
                           }`}
                         >
                           {isSelected && (
-                            <svg
-                              className="w-3 h-3 text-white"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clipRule="evenodd"
-                              />
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
                           )}
                         </div>
                         <div className="flex-1">
-                          <div className="font-semibold text-gray-800">
-                            {tenant.name}
-                          </div>
+                          <div className="font-semibold text-gray-800">{tenant.name}</div>
                           <div className="text-sm text-gray-500">
-                            {tenant.email} | {tenant.propertyAddress}
+                            {tenant.propertyAddress} | CT: x{tenant.elecMultiplier}
                           </div>
                         </div>
-                        {tenant.defaultRent > 0 && (
-                          <div className="text-sm font-medium text-green-600">
-                            {formatCurrency(tenant.defaultRent)}
-                          </div>
-                        )}
                       </div>
                     </button>
                   );
@@ -456,21 +473,21 @@ export default function NewInvoicePage() {
           </div>
 
           <button
-            onClick={() => setStep("details")}
+            onClick={goToDetails}
             disabled={selected.length === 0 || !selectedSenderId || !selectedBuildingId}
             className="w-full py-4 bg-blue-600 text-white text-lg font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Next: Enter Amounts
+            Next: Enter Readings
           </button>
         </>
       )}
 
-      {/* Step 2: Enter Amounts */}
+      {/* Step 2: Enter Details */}
       {step === "details" && (
         <>
           <div className="space-y-4 mb-6">
             {selected.map((item) => {
-              const gst = calculateGST(item.baseRent);
+              const calc = calcBill(item);
               return (
                 <div
                   key={item.tenantId}
@@ -480,87 +497,139 @@ export default function NewInvoicePage() {
                     {item.tenant.name}
                   </h3>
                   <p className="text-sm text-gray-500 mb-4">
-                    {item.tenant.propertyAddress}
+                    {item.tenant.propertyAddress} | CT Ratio: x{item.tenant.elecMultiplier}
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Invoice Number *
-                      </label>
-                      <input
-                        type="text"
-                        value={item.invoiceNumber}
-                        onChange={(e) =>
-                          setSelected(
-                            selected.map((s) =>
-                              s.tenantId === item.tenantId
-                                ? { ...s, invoiceNumber: e.target.value }
-                                : s
-                            )
-                          )
-                        }
-                        className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g. 47"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Base Rent Amount *
+                        Opening Reading {item.hasLastReading && <span className="text-xs text-green-600 font-normal">(auto-filled)</span>}
                       </label>
                       <input
                         type="number"
                         step="0.01"
-                        value={item.baseRent || ""}
-                        onChange={(e) =>
-                          updateRent(
-                            item.tenantId,
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
+                        value={item.openingReading || ""}
+                        onChange={(e) => updateField(item.tenantId, "openingReading", parseFloat(e.target.value) || 0)}
                         className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter rent amount"
+                        placeholder="Enter opening reading"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Closing Reading *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.closingReading || ""}
+                        onChange={(e) => updateField(item.tenantId, "closingReading", parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter closing reading"
                       />
                     </div>
                   </div>
 
-                  <div className="mb-4">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Particulars (Description)
-                    </label>
-                    <input
-                      type="text"
-                      value={item.description}
-                      onChange={(e) =>
-                        setSelected(
-                          selected.map((s) =>
-                            s.tenantId === item.tenantId
-                              ? { ...s, description: e.target.value }
-                              : s
-                          )
-                        )
-                      }
-                      className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Rate per Unit *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.ratePerUnit || ""}
+                        onChange={(e) => updateField(item.tenantId, "ratePerUnit", parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g. 8.50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Misc. Units
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.miscUnits || ""}
+                        onChange={(e) => updateField(item.tenantId, "miscUnits", parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        BWSSB Charges
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.bwssbCharges || ""}
+                        onChange={(e) => updateField(item.tenantId, "bwssbCharges", parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
 
-                  {item.baseRent > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Maintenance
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.maintenance || ""}
+                        onChange={(e) => updateField(item.tenantId, "maintenance", parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+
+                  {item.closingReading > 0 && item.ratePerUnit > 0 && (
                     <div className="bg-gray-50 rounded-lg p-4">
                       <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Base Rent</span>
-                        <span>{formatInvoiceAmount(item.baseRent)}</span>
+                        <span>Units Consumed ({item.closingReading} - {item.openingReading})</span>
+                        <span>{calc.unitsConsumed}</span>
                       </div>
                       <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>CGST @ 9%</span>
-                        <span>{formatInvoiceAmount(gst.cgst)}</span>
+                        <span>Total Units (x{item.tenant.elecMultiplier})</span>
+                        <span>{calc.totalUnitsConsumed}</span>
+                      </div>
+                      {item.miscUnits > 0 && (
+                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <span>+ Misc. Units</span>
+                          <span>{item.miscUnits}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>Total Units Charged</span>
+                        <span>{calc.totalUnitsCharged}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600 mb-1 pt-2 border-t border-gray-200">
+                        <span>Amount ({calc.totalUnitsCharged} x Rs.{item.ratePerUnit})</span>
+                        <span>{formatCurrency(calc.totalAmount)}</span>
                       </div>
                       <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>SGST @ 9%</span>
-                        <span>{formatInvoiceAmount(gst.sgst)}</span>
+                        <span>Min Charge ({item.tenant.elecMinChargeUnits} x {item.tenant.elecKVA})</span>
+                        <span>{formatCurrency(calc.minimumCharge)}</span>
                       </div>
+                      {item.bwssbCharges > 0 && (
+                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <span>BWSSB</span>
+                          <span>{formatCurrency(item.bwssbCharges)}</span>
+                        </div>
+                      )}
+                      {item.maintenance > 0 && (
+                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <span>Maintenance</span>
+                          <span>{formatCurrency(item.maintenance)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-gray-300 mt-2">
-                        <span>Total</span>
-                        <span>{formatCurrency(gst.total)}</span>
+                        <span>Net Payable</span>
+                        <span>{formatCurrency(calc.netPayable)}</span>
                       </div>
                     </div>
                   )}
@@ -578,10 +647,10 @@ export default function NewInvoicePage() {
             </button>
             <button
               onClick={() => setStep("preview")}
-              disabled={selected.some((s) => s.baseRent <= 0 || !s.invoiceNumber.trim())}
+              disabled={selected.some((s) => s.closingReading <= 0 || s.ratePerUnit <= 0)}
               className="flex-1 py-4 bg-blue-600 text-white text-lg font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
-              Preview Invoices
+              Preview Bills
             </button>
           </div>
         </>
@@ -592,14 +661,13 @@ export default function NewInvoicePage() {
         <>
           <div className="space-y-4 mb-6">
             {selected.map((item) => {
-              const gst = calculateGST(item.baseRent);
-              const invoiceDate = `01/${String(MONTHS.indexOf(month) + 1).padStart(2, "0")}/${year}`;
+              const calc = calcBill(item);
               return (
                 <div
                   key={item.tenantId}
                   className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
                 >
-                  {/* Invoice Header */}
+                  {/* Bill Header */}
                   <div className="text-center mb-4">
                     <div className="text-lg font-bold">{selectedSender?.name}</div>
                     {selectedBuilding?.name && (
@@ -613,96 +681,96 @@ export default function NewInvoicePage() {
                   </div>
 
                   <div className="text-center mb-4">
-                    <div className="text-lg font-bold underline">INVOICE</div>
+                    <div className="text-lg font-bold underline">ELECTRICITY BILL</div>
                   </div>
 
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>Invoice No.{item.invoiceNumber}</span>
-                    <span>Date: {invoiceDate}</span>
-                  </div>
-                  <div className="text-sm text-gray-600 mb-4">
-                    GST.No: {selectedSender?.gstNumber}
+                  <div className="flex justify-between text-sm mb-4">
+                    <span>Bill for: {month} {year}</span>
+                    <span>Date: 01/{String(MONTHS.indexOf(month) + 1).padStart(2, "0")}/{year}</span>
                   </div>
 
                   <div className="mb-4">
                     <div className="text-sm text-gray-500">To</div>
                     <div className="font-semibold">{item.tenant.name}</div>
-                    <div className="text-sm text-gray-600">
-                      {item.tenant.propertyAddress}
-                    </div>
-                    {item.tenant.gstNumber && (
-                      <div className="text-sm text-gray-500">
-                        GST.No: {item.tenant.gstNumber}
-                      </div>
-                    )}
+                    <div className="text-sm text-gray-600">{item.tenant.propertyAddress}</div>
                   </div>
 
-                  <div className="text-sm font-semibold mb-3">
-                    Sub: Invoice for the month of {month} {year}
-                  </div>
-
+                  {/* Readings Table */}
                   <table className="w-full border-collapse mb-4">
                     <thead>
                       <tr className="bg-gray-100">
-                        <th className="border border-gray-300 px-3 py-2 text-left text-sm font-semibold">
-                          Particulars
-                        </th>
-                        <th className="border border-gray-300 px-3 py-2 text-right text-sm font-semibold w-32">
-                          Amount
-                        </th>
+                        <th className="border border-gray-300 px-3 py-2 text-left text-sm font-semibold">Particulars</th>
+                        <th className="border border-gray-300 px-3 py-2 text-right text-sm font-semibold w-32">Details</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">
-                          {item.description}
-                        </td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">
-                          {formatInvoiceAmount(item.baseRent)}
-                        </td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm">Opening Reading</td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">{item.openingReading}</td>
                       </tr>
                       <tr>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">
-                          Add: GST@ 9%
-                        </td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">
-                          {formatInvoiceAmount(gst.cgst)}
-                        </td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm">Closing Reading</td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">{item.closingReading}</td>
                       </tr>
                       <tr>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">
-                          Add: GST@ 9%
-                        </td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">
-                          {formatInvoiceAmount(gst.sgst)}
-                        </td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm">Units Consumed</td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">{calc.unitsConsumed}</td>
                       </tr>
-                      <tr className="bg-gray-50 font-bold">
-                        <td className="border border-gray-300 px-3 py-2 text-sm">
-                          Total Rental Amount
-                        </td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">
-                          {formatInvoiceAmount(gst.total)}
-                        </td>
+                      <tr>
+                        <td className="border border-gray-300 px-3 py-2 text-sm">Multiplication Factor (x{item.tenant.elecMultiplier})</td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">{calc.totalUnitsConsumed}</td>
+                      </tr>
+                      {item.miscUnits > 0 && (
+                        <tr>
+                          <td className="border border-gray-300 px-3 py-2 text-sm">Misc. Units</td>
+                          <td className="border border-gray-300 px-3 py-2 text-sm text-right">{item.miscUnits}</td>
+                        </tr>
+                      )}
+                      <tr className="bg-gray-50 font-semibold">
+                        <td className="border border-gray-300 px-3 py-2 text-sm">Total Units Charged</td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">{calc.totalUnitsCharged}</td>
                       </tr>
                     </tbody>
                   </table>
 
-                  <p className="text-xs text-gray-500 italic mb-4">
-                    Amount in words: {amountInWords(gst.total)}
-                  </p>
+                  {/* Charges Table */}
+                  <table className="w-full border-collapse mb-4">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-3 py-2 text-left text-sm font-semibold">Charges</th>
+                        <th className="border border-gray-300 px-3 py-2 text-right text-sm font-semibold w-32">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="border border-gray-300 px-3 py-2 text-sm">{calc.totalUnitsCharged} units x Rs.{item.ratePerUnit}/unit</td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">{formatCurrency(calc.totalAmount)}</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-300 px-3 py-2 text-sm">Minimum Charge ({item.tenant.elecMinChargeUnits} x {item.tenant.elecKVA})</td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">{formatCurrency(calc.minimumCharge)}</td>
+                      </tr>
+                      {item.bwssbCharges > 0 && (
+                        <tr>
+                          <td className="border border-gray-300 px-3 py-2 text-sm">BWSSB Charges</td>
+                          <td className="border border-gray-300 px-3 py-2 text-sm text-right">{formatCurrency(item.bwssbCharges)}</td>
+                        </tr>
+                      )}
+                      {item.maintenance > 0 && (
+                        <tr>
+                          <td className="border border-gray-300 px-3 py-2 text-sm">Maintenance</td>
+                          <td className="border border-gray-300 px-3 py-2 text-sm text-right">{formatCurrency(item.maintenance)}</td>
+                        </tr>
+                      )}
+                      <tr className="bg-gray-50 font-bold">
+                        <td className="border border-gray-300 px-3 py-2 text-sm">Net Payable</td>
+                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">{formatCurrency(calc.netPayable)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
 
                   <div className="text-sm text-gray-600">Thanking You</div>
-                  {selectedSender?.signature && (
-                    <img
-                      src={selectedSender.signature}
-                      alt="Signature"
-                      className="h-14 mt-2"
-                    />
-                  )}
-                  <div className="text-sm font-semibold mt-2">
-                    ({selectedSender?.name})
-                  </div>
+                  <div className="text-sm font-semibold mt-2">({selectedSender?.name})</div>
                 </div>
               );
             })}
@@ -741,7 +809,7 @@ export default function NewInvoicePage() {
               disabled={sending}
               className="flex-1 py-4 bg-green-600 text-white text-lg font-semibold rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50"
             >
-              {sending ? "Sending..." : "Send Invoice(s)"}
+              {sending ? "Sending..." : "Send Bill(s)"}
             </button>
           </div>
         </>
@@ -751,7 +819,7 @@ export default function NewInvoicePage() {
         open={showSendModal}
         onClose={() => setShowSendModal(false)}
         onConfirm={handleSend}
-        title={`Send ${selected.length} Invoice(s)`}
+        title={`Send ${selected.length} Electricity Bill(s)`}
         recipientEmail={selected.map((s) => s.tenant.email).filter(Boolean).join(", ")}
         sending={sending}
       />

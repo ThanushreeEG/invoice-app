@@ -23,6 +23,12 @@ export const createTenantSchema = z.object({
         return trimmed === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
       });
     }, "One or more CC email addresses are invalid."),
+  elecMultiplier: z.coerce.number().int().min(1).optional().default(15),
+  elecMinChargeUnits: z.coerce.number().int().min(0).optional().default(0),
+  elecKVA: z.coerce.number().int().min(0).optional().default(375),
+  elecBWSSB: z.coerce.number().min(0).optional().default(0),
+  elecMaintenance: z.coerce.number().min(0).optional().default(0),
+  buildingId: z.string().optional().default(""),
 });
 
 export const updateTenantSchema = createTenantSchema.partial();
@@ -79,10 +85,47 @@ export const updateInvoiceSchema = z.object({
   description: z.string().max(500).optional(),
 });
 
+// ── Electricity Bills ──
+
+const electricityTenantSchema = z.object({
+  tenantId: z.string().min(1, "Tenant ID is required."),
+  openingReading: z.coerce.number().min(0, "Opening reading must be >= 0."),
+  closingReading: z.coerce.number().min(0, "Closing reading must be >= 0."),
+  miscUnits: z.coerce.number().min(0).optional().default(0),
+  ratePerUnit: z.coerce.number().positive("Rate per unit must be > 0."),
+  bwssbCharges: z.coerce.number().min(0).optional().default(0),
+  maintenance: z.coerce.number().min(0).optional().default(0),
+});
+
+export const createElectricityBillSchema = z.object({
+  senderId: z.string().min(1, "Please select a sender."),
+  buildingId: z.string().min(1, "Please select a building."),
+  month: z.enum(MONTHS, { message: "Invalid month." }),
+  year: z.coerce.number().int().min(2000).max(2100),
+  tenants: z.array(electricityTenantSchema).min(1, "Please select at least one tenant."),
+});
+
+export const updateElectricityBillSchema = z.object({
+  senderId: z.string().min(1),
+  buildingId: z.string().min(1),
+  month: z.enum(MONTHS, { message: "Invalid month." }),
+  year: z.coerce.number().int().min(2000).max(2100),
+  openingReading: z.coerce.number().min(0),
+  closingReading: z.coerce.number().min(0),
+  miscUnits: z.coerce.number().min(0).optional().default(0),
+  ratePerUnit: z.coerce.number().positive(),
+  bwssbCharges: z.coerce.number().min(0).optional().default(0),
+  maintenance: z.coerce.number().min(0).optional().default(0),
+});
+
 // ── Bulk Send ──
 
 export const bulkSendSchema = z.object({
   invoiceIds: z.array(z.string().min(1)).min(1, "No invoices selected."),
+});
+
+export const bulkSendElectricitySchema = z.object({
+  billIds: z.array(z.string().min(1)).min(1, "No bills selected."),
 });
 
 // ── Settings ──

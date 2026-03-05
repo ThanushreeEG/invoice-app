@@ -14,6 +14,7 @@ interface Tenant {
   propertyAddress: string;
   gstNumber: string;
   defaultRent: number;
+  buildingId: string | null;
 }
 
 export default function TenantsPage() {

@@ -4,6 +4,12 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
+interface Building {
+  id: string;
+  name: string;
+  address: string;
+}
+
 export default function EditTenantPage({
   params,
 }: {
@@ -13,6 +19,7 @@ export default function EditTenantPage({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [buildings, setBuildings] = useState<Building[]>([]);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -22,12 +29,20 @@ export default function EditTenantPage({
     gstNumber: "",
     defaultRent: "",
     defaultDescription: "",
+    elecMultiplier: "15",
+    elecMinChargeUnits: "0",
+    elecKVA: "375",
+    elecBWSSB: "0",
+    elecMaintenance: "0",
+    buildingId: "",
   });
 
   useEffect(() => {
-    fetch(`/api/tenants/${id}`)
-      .then((res) => res.json())
-      .then((data) => {
+    Promise.all([
+      fetch(`/api/tenants/${id}`).then((r) => r.json()),
+      fetch("/api/buildings").then((r) => r.json()),
+    ]).then(([data, buildingsData]) => {
+        setBuildings(buildingsData);
         setForm({
           name: data.name,
           email: data.email || "",
@@ -37,6 +52,12 @@ export default function EditTenantPage({
           gstNumber: data.gstNumber || "",
           defaultRent: data.defaultRent?.toString() || "",
           defaultDescription: data.defaultDescription || "Amount Charged towards rental of the premises",
+          elecMultiplier: data.elecMultiplier?.toString() || "15",
+          elecMinChargeUnits: data.elecMinChargeUnits?.toString() || "0",
+          elecKVA: data.elecKVA?.toString() || "375",
+          elecBWSSB: data.elecBWSSB?.toString() || "0",
+          elecMaintenance: data.elecMaintenance?.toString() || "0",
+          buildingId: data.buildingId || "",
         });
         setLoading(false);
       })
@@ -152,6 +173,25 @@ export default function EditTenantPage({
             </div>
 
             <div>
+              <label className={labelClass}>Building / Property</label>
+              <select
+                className={inputClass}
+                value={form.buildingId}
+                onChange={(e) => setForm({ ...form, buildingId: e.target.value })}
+              >
+                <option value="">-- Select Building --</option>
+                {buildings.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}{b.address ? ` — ${b.address.replace(/\n/g, ", ")}` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                Assign this tenant to a building so they appear when creating bills for that building.
+              </p>
+            </div>
+
+            <div>
               <label className={labelClass}>GST Number</label>
               <input
                 type="text"
@@ -190,6 +230,66 @@ export default function EditTenantPage({
                   setForm({ ...form, defaultRent: e.target.value })
                 }
               />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Electricity Defaults</h2>
+          <p className="text-xs text-gray-400 mb-4">
+            These values are pre-filled when creating electricity bills for this tenant.
+          </p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Multiplication Factor (CT Ratio)</label>
+                <input
+                  type="number"
+                  className={inputClass}
+                  value={form.elecMultiplier}
+                  onChange={(e) => setForm({ ...form, elecMultiplier: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Min Charge Units</label>
+                <input
+                  type="number"
+                  className={inputClass}
+                  value={form.elecMinChargeUnits}
+                  onChange={(e) => setForm({ ...form, elecMinChargeUnits: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className={labelClass}>KVA</label>
+                <input
+                  type="number"
+                  className={inputClass}
+                  value={form.elecKVA}
+                  onChange={(e) => setForm({ ...form, elecKVA: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>BWSSB Charges</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className={inputClass}
+                  value={form.elecBWSSB}
+                  onChange={(e) => setForm({ ...form, elecBWSSB: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Maintenance Charges</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className={inputClass}
+                  value={form.elecMaintenance}
+                  onChange={(e) => setForm({ ...form, elecMaintenance: e.target.value })}
+                />
+              </div>
             </div>
           </div>
         </div>

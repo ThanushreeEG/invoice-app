@@ -31,6 +31,12 @@ export async function PUT(
       gstNumber: body.gstNumber || "",
       defaultRent: body.defaultRent ? parseFloat(body.defaultRent) : 0,
       defaultDescription: body.defaultDescription || "Amount Charged towards rental of the premises",
+      elecMultiplier: body.elecMultiplier ? parseInt(body.elecMultiplier) : 15,
+      elecMinChargeUnits: body.elecMinChargeUnits ? parseInt(body.elecMinChargeUnits) : 0,
+      elecKVA: body.elecKVA ? parseInt(body.elecKVA) : 375,
+      elecBWSSB: body.elecBWSSB ? parseFloat(body.elecBWSSB) : 0,
+      elecMaintenance: body.elecMaintenance ? parseFloat(body.elecMaintenance) : 0,
+      buildingId: body.buildingId || null,
     },
   });
 

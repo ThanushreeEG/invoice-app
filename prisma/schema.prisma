@@ -8,41 +8,52 @@ datasource db {
 }
 
 model Sender {
-  id              String    @id @default(cuid())
-  name            String
-  gstNumber       String    @default("")
-  nextInvoiceNum  Int       @default(1)
-  signature       String    @default("")
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  invoices        Invoice[]
+  id                String              @id @default(cuid())
+  name              String
+  gstNumber         String              @default("")
+  nextInvoiceNum    Int                 @default(1)
+  signature         String              @default("")
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  invoices          Invoice[]
+  electricityBills  ElectricityBill[]
 }
 
 model Building {
-  id        String    @id @default(cuid())
-  name      String
-  address   String    @default("")
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  invoices  Invoice[]
+  id                String              @id @default(cuid())
+  name              String
+  address           String              @default("")
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  tenants           Tenant[]
+  invoices          Invoice[]
+  electricityBills  ElectricityBill[]
 }
 
 model Tenant {
-  id              String    @id @default(cuid())
-  name            String
-  email           String    @default("")
-  ccEmails        String    @default("")
-  phone           String    @default("")
-  propertyAddress String
-  gstNumber       String    @default("")
-  defaultRent     Float     @default(0)
-  defaultDescription String @default("Amount Charged towards rental of the premises")
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  invoices        Invoice[]
+  id                  String              @id @default(cuid())
+  name                String
+  email               String              @default("")
+  ccEmails            String              @default("")
+  phone               String              @default("")
+  propertyAddress     String
+  gstNumber           String              @default("")
+  buildingId          String?
+  building            Building?           @relation(fields: [buildingId], references: [id])
+  defaultRent         Float               @default(0)
+  defaultDescription  String              @default("Amount Charged towards rental of the premises")
+  elecMultiplier      Int                 @default(15)
+  elecMinChargeUnits  Int                 @default(0)
+  elecKVA             Int                 @default(375)
+  elecBWSSB           Float               @default(0)
+  elecMaintenance     Float               @default(0)
+  isActive            Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  invoices            Invoice[]
+  electricityBills    ElectricityBill[]
 }
 
 model Invoice {
@@ -83,4 +94,35 @@ model Settings {
   bankDetails     String   @default("")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model ElectricityBill {
+  id                  String    @id @default(cuid())
+  senderId            String
+  sender              Sender    @relation(fields: [senderId], references: [id])
+  buildingId          String    @default("")
+  building            Building? @relation(fields: [buildingId], references: [id])
+  tenantId            String
+  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  month               String
+  year                Int
+  billDate            DateTime  @default(now())
+  openingReading      Float
+  closingReading      Float
+  unitsConsumed       Float
+  totalUnitsConsumed  Float
+  miscUnits           Float     @default(0)
+  totalUnitsCharged   Float
+  ratePerUnit         Float
+  totalAmount         Float
+  minChargeUnits      Int
+  kva                 Int
+  minimumCharge       Float
+  bwssbCharges        Float     @default(0)
+  maintenance         Float     @default(0)
+  netPayable          Float
+  status              String    @default("DRAFT")
+  sentAt              DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }

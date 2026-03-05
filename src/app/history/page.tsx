@@ -1,0 +1,396 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { formatCurrency } from "@/lib/formatCurrency";
+import Link from "next/link";
+import SendConfirmModal from "@/components/SendConfirmModal";
+
+interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  month: string;
+  year: number;
+  baseRent: number;
+  totalAmount: number;
+  status: string;
+  sentAt: string | null;
+  createdAt: string;
+  tenant: { name: string; email: string; ccEmails: string };
+  sender: { name: string };
+}
+
+interface ElectricityBill {
+  id: string;
+  month: string;
+  year: number;
+  openingReading: number;
+  closingReading: number;
+  totalUnitsCharged: number;
+  netPayable: number;
+  status: string;
+  sentAt: string | null;
+  createdAt: string;
+  tenant: { name: string; email: string; ccEmails: string };
+  sender: { name: string };
+}
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+const STATUS_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "DRAFT", label: "Draft" },
+  { value: "SENT", label: "Sent" },
+  { value: "FAILED", label: "Failed" },
+];
+
+function statusBadge(status: string) {
+  const styles: Record<string, string> = {
+    DRAFT: "bg-yellow-100 text-yellow-700",
+    SENT: "bg-green-100 text-green-700",
+    FAILED: "bg-red-100 text-red-700",
+  };
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${styles[status] || "bg-gray-100 text-gray-700"}`}>
+      {status}
+    </span>
+  );
+}
+
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  return `${d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} at ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+export default function HistoryPage() {
+  const router = useRouter();
+
+  // Invoice state
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invPagination, setInvPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [invPage, setInvPage] = useState(1);
+  const [invSearch, setInvSearch] = useState("");
+  const [invStatus, setInvStatus] = useState("");
+  const [invLoading, setInvLoading] = useState(true);
+  const [invSendingId, setInvSendingId] = useState<string | null>(null);
+
+  // EB Bill state
+  const [bills, setBills] = useState<ElectricityBill[]>([]);
+  const [ebPagination, setEbPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [ebPage, setEbPage] = useState(1);
+  const [ebSearch, setEbSearch] = useState("");
+  const [ebStatus, setEbStatus] = useState("");
+  const [ebLoading, setEbLoading] = useState(true);
+  const [ebSendingId, setEbSendingId] = useState<string | null>(null);
+
+  // Send modal state
+  const [sendModal, setSendModal] = useState<{
+    type: "invoice" | "eb";
+    id: string;
+    pdfUrl: string;
+    title: string;
+    email: string;
+    ccEmails: string;
+  } | null>(null);
+
+  // Fetch invoices
+  const fetchInvoices = useCallback((p = invPage, s = invSearch, st = invStatus) => {
+    const params = new URLSearchParams();
+    params.set("page", String(p));
+    params.set("limit", "10");
+    if (s) params.set("search", s);
+    if (st) params.set("status", st);
+    fetch(`/api/invoices?${params}`)
+      .then((res) => res.json())
+      .then((data) => { setInvoices(data.invoices); setInvPagination(data.pagination); setInvLoading(false); })
+      .catch(() => setInvLoading(false));
+  }, [invPage, invSearch, invStatus]);
+
+  // Fetch EB bills
+  const fetchBills = useCallback((p = ebPage, s = ebSearch, st = ebStatus) => {
+    const params = new URLSearchParams();
+    params.set("page", String(p));
+    params.set("limit", "10");
+    if (s) params.set("search", s);
+    if (st) params.set("status", st);
+    fetch(`/api/electricity?${params}`)
+      .then((res) => res.json())
+      .then((data) => { setBills(data.bills); setEbPagination(data.pagination); setEbLoading(false); })
+      .catch(() => setEbLoading(false));
+  }, [ebPage, ebSearch, ebStatus]);
+
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+  useEffect(() => { fetchBills(); }, [fetchBills]);
+
+  // Invoice handlers
+  const handleInvSearch = (v: string) => { setInvSearch(v); setInvPage(1); fetchInvoices(1, v, invStatus); };
+  const handleInvStatus = (v: string) => { setInvStatus(v); setInvPage(1); fetchInvoices(1, invSearch, v); };
+  const handleInvPage = (p: number) => { setInvPage(p); fetchInvoices(p, invSearch, invStatus); };
+
+  const openInvSendModal = (inv: Invoice) => {
+    setSendModal({
+      type: "invoice",
+      id: inv.id,
+      pdfUrl: `/api/invoices/${inv.id}/pdf`,
+      title: `Send Invoice #${inv.invoiceNumber}`,
+      email: inv.tenant.email,
+      ccEmails: inv.tenant.ccEmails,
+    });
+  };
+
+  const handleInvSend = async (id: string) => {
+    setInvSendingId(id);
+    try {
+      const res = await fetch(`/api/invoices/${id}/send`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) { toast.success("Invoice sent!"); fetchInvoices(); } else { toast.error(data.error || "Failed to send."); }
+    } catch { toast.error("Failed to send invoice."); }
+    setInvSendingId(null);
+    setSendModal(null);
+  };
+
+  const handleInvDelete = async (id: string) => {
+    if (!confirm("Delete this draft invoice?")) return;
+    try {
+      const res = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) { toast.success("Invoice deleted!"); fetchInvoices(); } else { toast.error(data.error || "Failed to delete."); }
+    } catch { toast.error("Failed to delete invoice."); }
+  };
+
+  // EB handlers
+  const handleEbSearch = (v: string) => { setEbSearch(v); setEbPage(1); fetchBills(1, v, ebStatus); };
+  const handleEbStatus = (v: string) => { setEbStatus(v); setEbPage(1); fetchBills(1, ebSearch, v); };
+  const handleEbPage = (p: number) => { setEbPage(p); fetchBills(p, ebSearch, ebStatus); };
+
+  const openEbSendModal = (bill: ElectricityBill) => {
+    setSendModal({
+      type: "eb",
+      id: bill.id,
+      pdfUrl: `/api/electricity/${bill.id}/pdf`,
+      title: `Send EB Bill - ${bill.tenant.name} - ${bill.month} ${bill.year}`,
+      email: bill.tenant.email,
+      ccEmails: bill.tenant.ccEmails,
+    });
+  };
+
+  const handleEbSend = async (id: string) => {
+    setEbSendingId(id);
+    try {
+      const res = await fetch(`/api/electricity/${id}/send`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) { toast.success("Bill sent!"); fetchBills(); } else { toast.error(data.error || "Failed to send."); }
+    } catch { toast.error("Failed to send bill."); }
+    setEbSendingId(null);
+    setSendModal(null);
+  };
+
+  const handleEbDelete = async (id: string) => {
+    if (!confirm("Delete this draft electricity bill?")) return;
+    try {
+      const res = await fetch(`/api/electricity/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) { toast.success("Bill deleted!"); fetchBills(); } else { toast.error(data.error || "Failed to delete."); }
+    } catch { toast.error("Failed to delete bill."); }
+  };
+
+  // Download helpers
+  const downloadInvPDF = (id: string, num: string) => {
+    const a = document.createElement("a"); a.href = `/api/invoices/${id}/pdf`; a.download = `Invoice-${num}.pdf`; a.click();
+  };
+  const downloadEbPDF = (id: string, tenant: string, month: string, year: number) => {
+    const a = document.createElement("a"); a.href = `/api/electricity/${id}/pdf`; a.download = `EB-Bill-${tenant}-${month}-${year}.pdf`; a.click();
+  };
+
+  // Shared pagination component
+  const PaginationControls = ({ pagination, currentPage, onPageChange }: { pagination: Pagination; currentPage: number; onPageChange: (p: number) => void }) =>
+    pagination.totalPages > 1 ? (
+      <div className="flex items-center justify-between mt-4">
+        <div className="text-sm text-gray-500">
+          {(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage <= 1} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50">Prev</button>
+          <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage >= pagination.totalPages} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50">Next</button>
+        </div>
+      </div>
+    ) : null;
+
+  // Shared filter bar
+  const FilterBar = ({ search, onSearch, status, onStatus, placeholder }: { search: string; onSearch: (v: string) => void; status: string; onStatus: (v: string) => void; placeholder: string }) => (
+    <div className="flex flex-col sm:flex-row gap-2 mb-3">
+      <input
+        type="text" value={search} onChange={(e) => onSearch(e.target.value)} placeholder={placeholder}
+        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <div className="flex gap-1">
+        {STATUS_OPTIONS.map((opt) => (
+          <button key={opt.value} onClick={() => onStatus(opt.value)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${status === opt.value ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+          >{opt.label}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">Bill History</h1>
+
+      {/* ═══════════════════════════════════════ */}
+      {/* INVOICES SECTION */}
+      {/* ═══════════════════════════════════════ */}
+      <section className="mb-10">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-gray-700">Rent Invoices</h2>
+          <Link href="/invoices/new" className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">+ New Invoice</Link>
+        </div>
+
+        <FilterBar search={invSearch} onSearch={handleInvSearch} status={invStatus} onStatus={handleInvStatus} placeholder="Search by invoice # or tenant..." />
+
+        {invLoading ? (
+          <div className="text-gray-500 text-sm py-6 text-center">Loading invoices...</div>
+        ) : invoices.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-500 text-sm">
+            {invSearch || invStatus ? "No invoices match your filters." : "No invoices yet."}
+          </div>
+        ) : (
+          <>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
+                    <th className="text-left px-4 py-3 font-semibold">Invoice #</th>
+                    <th className="text-left px-4 py-3 font-semibold">Tenant</th>
+                    <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Period</th>
+                    <th className="text-right px-4 py-3 font-semibold">Amount</th>
+                    <th className="text-center px-4 py-3 font-semibold">Status</th>
+                    <th className="text-right px-4 py-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map((inv) => (
+                    <tr key={inv.id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium">{inv.invoiceNumber}</td>
+                      <td className="px-4 py-3">
+                        <div>{inv.tenant.name}</div>
+                        {inv.status === "SENT" && inv.sentAt && <div className="text-xs text-green-600">Sent {formatDate(inv.sentAt)}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{inv.month} {inv.year}</td>
+                      <td className="px-4 py-3 text-right font-medium">{formatCurrency(inv.totalAmount)}</td>
+                      <td className="px-4 py-3 text-center">{statusBadge(inv.status)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button onClick={() => downloadInvPDF(inv.id, inv.invoiceNumber)} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200">PDF</button>
+                          <button onClick={() => openInvSendModal(inv)} disabled={invSendingId === inv.id || (!inv.tenant.email && !inv.tenant.ccEmails)}
+                            className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 disabled:opacity-50">
+                            {invSendingId === inv.id ? "..." : "Send"}
+                          </button>
+                          {inv.status !== "SENT" && (
+                            <>
+                              <button onClick={() => router.push(`/invoices/${inv.id}/edit`)} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100">Edit</button>
+                              <button onClick={() => handleInvDelete(inv.id)} className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100">Del</button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <PaginationControls pagination={invPagination} currentPage={invPage} onPageChange={handleInvPage} />
+          </>
+        )}
+      </section>
+
+      {/* ═══════════════════════════════════════ */}
+      {/* ELECTRICITY BILLS SECTION */}
+      {/* ═══════════════════════════════════════ */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-gray-700">Electricity / Water Bills</h2>
+          <Link href="/electricity/new" className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors">+ New EB Bill</Link>
+        </div>
+
+        <FilterBar search={ebSearch} onSearch={handleEbSearch} status={ebStatus} onStatus={handleEbStatus} placeholder="Search by tenant name..." />
+
+        {ebLoading ? (
+          <div className="text-gray-500 text-sm py-6 text-center">Loading electricity bills...</div>
+        ) : bills.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-500 text-sm">
+            {ebSearch || ebStatus ? "No bills match your filters." : "No electricity bills yet."}
+          </div>
+        ) : (
+          <>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
+                    <th className="text-left px-4 py-3 font-semibold">Tenant</th>
+                    <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Period</th>
+                    <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Reading</th>
+                    <th className="text-right px-4 py-3 font-semibold">Net Payable</th>
+                    <th className="text-center px-4 py-3 font-semibold">Status</th>
+                    <th className="text-right px-4 py-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bills.map((bill) => (
+                    <tr key={bill.id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{bill.tenant.name}</div>
+                        {bill.status === "SENT" && bill.sentAt && <div className="text-xs text-green-600">Sent {formatDate(bill.sentAt)}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{bill.month} {bill.year}</td>
+                      <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{bill.openingReading} &rarr; {bill.closingReading}</td>
+                      <td className="px-4 py-3 text-right font-medium">{formatCurrency(bill.netPayable)}</td>
+                      <td className="px-4 py-3 text-center">{statusBadge(bill.status)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button onClick={() => downloadEbPDF(bill.id, bill.tenant.name, bill.month, bill.year)} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200">PDF</button>
+                          <button onClick={() => openEbSendModal(bill)} disabled={ebSendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
+                            className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 disabled:opacity-50">
+                            {ebSendingId === bill.id ? "..." : "Send"}
+                          </button>
+                          {bill.status !== "SENT" && (
+                            <>
+                              <button onClick={() => router.push(`/electricity/${bill.id}/edit`)} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100">Edit</button>
+                              <button onClick={() => handleEbDelete(bill.id)} className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100">Del</button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <PaginationControls pagination={ebPagination} currentPage={ebPage} onPageChange={handleEbPage} />
+          </>
+        )}
+      </section>
+
+      <SendConfirmModal
+        open={sendModal !== null}
+        onClose={() => setSendModal(null)}
+        onConfirm={() => {
+          if (!sendModal) return;
+          if (sendModal.type === "invoice") handleInvSend(sendModal.id);
+          else handleEbSend(sendModal.id);
+        }}
+        pdfUrl={sendModal?.pdfUrl}
+        title={sendModal?.title || ""}
+        recipientEmail={sendModal?.email || ""}
+        ccEmails={sendModal?.ccEmails}
+        sending={invSendingId !== null || ebSendingId !== null}
+      />
+    </div>
+  );
+}
