@@ -105,7 +105,9 @@ export async function POST(request: Request) {
     const minimumCharge = minChargeUnits * kva;
     const bwssbCharges = item.bwssbCharges || 0;
     const maintenance = item.maintenance || 0;
-    const netPayable = totalAmount + minimumCharge + bwssbCharges + maintenance;
+    const dgMaintenance = item.dgMaintenance || 0;
+    const waterCharges = item.waterCharges || 0;
+    const netPayable = totalAmount + minimumCharge + bwssbCharges + maintenance + dgMaintenance + waterCharges;
 
     const bill = await prisma.electricityBill.create({
       data: {
@@ -128,6 +130,8 @@ export async function POST(request: Request) {
         minimumCharge,
         bwssbCharges,
         maintenance,
+        dgMaintenance,
+        waterCharges,
         netPayable,
         status: "DRAFT",
       },
@@ -157,6 +161,8 @@ export async function POST(request: Request) {
       minimumCharge,
       bwssbCharges,
       maintenance,
+      dgMaintenance,
+      waterCharges,
       netPayable,
     });
 

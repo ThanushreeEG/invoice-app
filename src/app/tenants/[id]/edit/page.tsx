@@ -34,6 +34,8 @@ export default function EditTenantPage({
     elecKVA: "375",
     elecBWSSB: "0",
     elecMaintenance: "0",
+    elecDgMaintenance: "0",
+    elecWaterCharges: "0",
     buildingId: "",
   });
 
@@ -57,6 +59,8 @@ export default function EditTenantPage({
           elecKVA: data.elecKVA?.toString() || "375",
           elecBWSSB: data.elecBWSSB?.toString() || "0",
           elecMaintenance: data.elecMaintenance?.toString() || "0",
+          elecDgMaintenance: data.elecDgMaintenance?.toString() || "0",
+          elecWaterCharges: data.elecWaterCharges?.toString() || "0",
           buildingId: data.buildingId || "",
         });
         setLoading(false);
@@ -288,6 +292,28 @@ export default function EditTenantPage({
                   className={inputClass}
                   value={form.elecMaintenance}
                   onChange={(e) => setForm({ ...form, elecMaintenance: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>DG Maintenance</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className={inputClass}
+                  value={form.elecDgMaintenance}
+                  onChange={(e) => setForm({ ...form, elecDgMaintenance: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Water Charges</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className={inputClass}
+                  value={form.elecWaterCharges}
+                  onChange={(e) => setForm({ ...form, elecWaterCharges: e.target.value })}
                 />
               </div>
             </div>

@@ -63,7 +63,9 @@ export async function PUT(
   const minimumCharge = minChargeUnits * kva;
   const bwssbCharges = body.bwssbCharges || 0;
   const maintenance = body.maintenance || 0;
-  const netPayable = totalAmount + minimumCharge + bwssbCharges + maintenance;
+  const dgMaintenance = body.dgMaintenance || 0;
+  const waterCharges = body.waterCharges || 0;
+  const netPayable = totalAmount + minimumCharge + bwssbCharges + maintenance + dgMaintenance + waterCharges;
 
   const monthIndex = [
     "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
@@ -93,6 +95,8 @@ export async function PUT(
       minimumCharge,
       bwssbCharges,
       maintenance,
+      dgMaintenance,
+      waterCharges,
       netPayable,
     },
     include: { tenant: true, sender: true, building: true },

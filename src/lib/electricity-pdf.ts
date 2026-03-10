@@ -39,6 +39,8 @@ export interface ElectricityBillData {
   minimumCharge: number;
   bwssbCharges: number;
   maintenance: number;
+  dgMaintenance: number;
+  waterCharges: number;
   netPayable: number;
 }
 
@@ -92,6 +94,20 @@ export async function generateElectricityBillPDF(data: ElectricityBillData): Pro
       noBorder({ text: "Maintenance charges", fontSize: 10 }),
       noBorder({ text: "=", fontSize: 10, alignment: "center" }),
       noBorder({ text: `Rs. ${formatInvoiceAmount(data.maintenance)}`, fontSize: 10, alignment: "right" }),
+    ]);
+  }
+  if (data.dgMaintenance > 0) {
+    chargeRows.push([
+      noBorder({ text: "DG Maintenance charges", fontSize: 10 }),
+      noBorder({ text: "=", fontSize: 10, alignment: "center" }),
+      noBorder({ text: `Rs. ${formatInvoiceAmount(data.dgMaintenance)}`, fontSize: 10, alignment: "right" }),
+    ]);
+  }
+  if (data.waterCharges > 0) {
+    chargeRows.push([
+      noBorder({ text: "Water charges", fontSize: 10 }),
+      noBorder({ text: "=", fontSize: 10, alignment: "center" }),
+      noBorder({ text: `Rs. ${formatInvoiceAmount(data.waterCharges)}`, fontSize: 10, alignment: "right" }),
     ]);
   }
 

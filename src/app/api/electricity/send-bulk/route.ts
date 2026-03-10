@@ -95,6 +95,8 @@ export async function POST(request: Request) {
         minimumCharge: bill.minimumCharge,
         bwssbCharges: bill.bwssbCharges,
         maintenance: bill.maintenance,
+        dgMaintenance: bill.dgMaintenance,
+        waterCharges: bill.waterCharges,
         netPayable: bill.netPayable,
       });
 

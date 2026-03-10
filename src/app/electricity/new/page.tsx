@@ -27,6 +27,8 @@ interface Tenant {
   elecKVA: number;
   elecBWSSB: number;
   elecMaintenance: number;
+  elecDgMaintenance: number;
+  elecWaterCharges: number;
 }
 
 interface TenantBill {
@@ -38,6 +40,8 @@ interface TenantBill {
   ratePerUnit: number;
   bwssbCharges: number;
   maintenance: number;
+  dgMaintenance: number;
+  waterCharges: number;
   hasLastReading: boolean;
 }
 
@@ -52,7 +56,7 @@ function calcBill(item: TenantBill) {
   const totalUnitsCharged = totalUnitsConsumed + item.miscUnits;
   const totalAmount = totalUnitsCharged * item.ratePerUnit;
   const minimumCharge = item.tenant.elecMinChargeUnits * item.tenant.elecKVA;
-  const netPayable = totalAmount + minimumCharge + item.bwssbCharges + item.maintenance;
+  const netPayable = totalAmount + minimumCharge + item.bwssbCharges + item.maintenance + item.dgMaintenance + item.waterCharges;
   return { unitsConsumed, totalUnitsConsumed, totalUnitsCharged, totalAmount, minimumCharge, netPayable };
 }
 
@@ -111,6 +115,8 @@ export default function NewElectricityBillPage() {
           ratePerUnit: 0,
           bwssbCharges: tenant.elecBWSSB,
           maintenance: tenant.elecMaintenance,
+          dgMaintenance: tenant.elecDgMaintenance,
+          waterCharges: tenant.elecWaterCharges,
           hasLastReading: false,
         },
       ]);
@@ -131,6 +137,8 @@ export default function NewElectricityBillPage() {
           ratePerUnit: 0,
           bwssbCharges: t.elecBWSSB,
           maintenance: t.elecMaintenance,
+          dgMaintenance: t.elecDgMaintenance,
+          waterCharges: t.elecWaterCharges,
           hasLastReading: false,
         }))
       );
@@ -185,6 +193,8 @@ export default function NewElectricityBillPage() {
             ratePerUnit: s.ratePerUnit,
             bwssbCharges: s.bwssbCharges,
             maintenance: s.maintenance,
+            dgMaintenance: s.dgMaintenance,
+            waterCharges: s.waterCharges,
           })),
         }),
       });
@@ -250,6 +260,8 @@ export default function NewElectricityBillPage() {
             ratePerUnit: s.ratePerUnit,
             bwssbCharges: s.bwssbCharges,
             maintenance: s.maintenance,
+            dgMaintenance: s.dgMaintenance,
+            waterCharges: s.waterCharges,
           })),
         }),
       });
@@ -301,6 +313,8 @@ export default function NewElectricityBillPage() {
             ratePerUnit: s.ratePerUnit,
             bwssbCharges: s.bwssbCharges,
             maintenance: s.maintenance,
+            dgMaintenance: s.dgMaintenance,
+            waterCharges: s.waterCharges,
           })),
         }),
       });
@@ -571,7 +585,7 @@ export default function NewElectricityBillPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1">
                         Maintenance
@@ -581,6 +595,32 @@ export default function NewElectricityBillPage() {
                         step="0.01"
                         value={item.maintenance || ""}
                         onChange={(e) => updateField(item.tenantId, "maintenance", parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        DG Maintenance
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.dgMaintenance || ""}
+                        onChange={(e) => updateField(item.tenantId, "dgMaintenance", parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Water Charges
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.waterCharges || ""}
+                        onChange={(e) => updateField(item.tenantId, "waterCharges", parseFloat(e.target.value) || 0)}
                         className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="0"
                       />
@@ -625,6 +665,18 @@ export default function NewElectricityBillPage() {
                         <div className="flex justify-between text-sm text-gray-600 mb-1">
                           <span>Maintenance</span>
                           <span>{formatCurrency(item.maintenance)}</span>
+                        </div>
+                      )}
+                      {item.dgMaintenance > 0 && (
+                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <span>DG Maintenance</span>
+                          <span>{formatCurrency(item.dgMaintenance)}</span>
+                        </div>
+                      )}
+                      {item.waterCharges > 0 && (
+                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <span>Water Charges</span>
+                          <span>{formatCurrency(item.waterCharges)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-gray-300 mt-2">
@@ -760,6 +812,18 @@ export default function NewElectricityBillPage() {
                         <tr>
                           <td className="border border-gray-300 px-3 py-2 text-sm">Maintenance</td>
                           <td className="border border-gray-300 px-3 py-2 text-sm text-right">{formatCurrency(item.maintenance)}</td>
+                        </tr>
+                      )}
+                      {item.dgMaintenance > 0 && (
+                        <tr>
+                          <td className="border border-gray-300 px-3 py-2 text-sm">DG Maintenance</td>
+                          <td className="border border-gray-300 px-3 py-2 text-sm text-right">{formatCurrency(item.dgMaintenance)}</td>
+                        </tr>
+                      )}
+                      {item.waterCharges > 0 && (
+                        <tr>
+                          <td className="border border-gray-300 px-3 py-2 text-sm">Water Charges</td>
+                          <td className="border border-gray-300 px-3 py-2 text-sm text-right">{formatCurrency(item.waterCharges)}</td>
                         </tr>
                       )}
                       <tr className="bg-gray-50 font-bold">

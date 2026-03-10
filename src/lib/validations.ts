@@ -28,6 +28,8 @@ export const createTenantSchema = z.object({
   elecKVA: z.coerce.number().int().min(0).optional().default(375),
   elecBWSSB: z.coerce.number().min(0).optional().default(0),
   elecMaintenance: z.coerce.number().min(0).optional().default(0),
+  elecDgMaintenance: z.coerce.number().min(0).optional().default(0),
+  elecWaterCharges: z.coerce.number().min(0).optional().default(0),
   buildingId: z.string().optional().default(""),
 });
 
@@ -95,6 +97,8 @@ const electricityTenantSchema = z.object({
   ratePerUnit: z.coerce.number().positive("Rate per unit must be > 0."),
   bwssbCharges: z.coerce.number().min(0).optional().default(0),
   maintenance: z.coerce.number().min(0).optional().default(0),
+  dgMaintenance: z.coerce.number().min(0).optional().default(0),
+  waterCharges: z.coerce.number().min(0).optional().default(0),
 });
 
 export const createElectricityBillSchema = z.object({
@@ -116,6 +120,8 @@ export const updateElectricityBillSchema = z.object({
   ratePerUnit: z.coerce.number().positive(),
   bwssbCharges: z.coerce.number().min(0).optional().default(0),
   maintenance: z.coerce.number().min(0).optional().default(0),
+  dgMaintenance: z.coerce.number().min(0).optional().default(0),
+  waterCharges: z.coerce.number().min(0).optional().default(0),
 });
 
 // ── Bulk Send ──

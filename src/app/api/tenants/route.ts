@@ -45,6 +45,8 @@ export async function POST(request: Request) {
       elecKVA: data.elecKVA,
       elecBWSSB: data.elecBWSSB,
       elecMaintenance: data.elecMaintenance,
+      elecDgMaintenance: data.elecDgMaintenance,
+      elecWaterCharges: data.elecWaterCharges,
       buildingId: data.buildingId || null,
     },
   });

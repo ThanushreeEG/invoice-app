@@ -49,6 +49,8 @@ model Tenant {
   elecKVA             Int                 @default(375)
   elecBWSSB           Float               @default(0)
   elecMaintenance     Float               @default(0)
+  elecDgMaintenance   Float               @default(0)
+  elecWaterCharges    Float               @default(0)
   isActive            Boolean             @default(true)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
@@ -120,6 +122,8 @@ model ElectricityBill {
   minimumCharge       Float
   bwssbCharges        Float     @default(0)
   maintenance         Float     @default(0)
+  dgMaintenance       Float     @default(0)
+  waterCharges        Float     @default(0)
   netPayable          Float
   status              String    @default("DRAFT")
   sentAt              DateTime?

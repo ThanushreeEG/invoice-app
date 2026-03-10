@@ -36,6 +36,8 @@ export async function PUT(
       elecKVA: body.elecKVA ? parseInt(body.elecKVA) : 375,
       elecBWSSB: body.elecBWSSB ? parseFloat(body.elecBWSSB) : 0,
       elecMaintenance: body.elecMaintenance ? parseFloat(body.elecMaintenance) : 0,
+      elecDgMaintenance: body.elecDgMaintenance ? parseFloat(body.elecDgMaintenance) : 0,
+      elecWaterCharges: body.elecWaterCharges ? parseFloat(body.elecWaterCharges) : 0,
       buildingId: body.buildingId || null,
     },
   });

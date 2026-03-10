@@ -28,6 +28,8 @@ export default function NewTenantPage() {
     elecKVA: "375",
     elecBWSSB: "0",
     elecMaintenance: "0",
+    elecDgMaintenance: "0",
+    elecWaterCharges: "0",
     buildingId: "",
   });
 
@@ -264,6 +266,30 @@ export default function NewTenantPage() {
                   className={inputClass}
                   value={form.elecMaintenance}
                   onChange={(e) => setForm({ ...form, elecMaintenance: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>DG Maintenance</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className={inputClass}
+                  value={form.elecDgMaintenance}
+                  onChange={(e) => setForm({ ...form, elecDgMaintenance: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Water Charges</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className={inputClass}
+                  value={form.elecWaterCharges}
+                  onChange={(e) => setForm({ ...form, elecWaterCharges: e.target.value })}
                   placeholder="0"
                 />
               </div>

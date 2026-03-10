@@ -47,6 +47,8 @@ export default function EditElectricityBillPage({
     ratePerUnit: 0,
     bwssbCharges: 0,
     maintenance: 0,
+    dgMaintenance: 0,
+    waterCharges: 0,
   });
 
   useEffect(() => {
@@ -82,6 +84,8 @@ export default function EditElectricityBillPage({
         ratePerUnit: bill.ratePerUnit,
         bwssbCharges: bill.bwssbCharges,
         maintenance: bill.maintenance,
+        dgMaintenance: bill.dgMaintenance,
+        waterCharges: bill.waterCharges,
       });
       setLoading(false);
     }).catch(() => {
@@ -95,7 +99,7 @@ export default function EditElectricityBillPage({
   const totalUnitsCharged = totalUnitsConsumed + form.miscUnits;
   const totalAmount = totalUnitsCharged * form.ratePerUnit;
   const minimumCharge = minChargeUnits * kva;
-  const netPayable = totalAmount + minimumCharge + form.bwssbCharges + form.maintenance;
+  const netPayable = totalAmount + minimumCharge + form.bwssbCharges + form.maintenance + form.dgMaintenance + form.waterCharges;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,6 +268,28 @@ export default function EditElectricityBillPage({
               />
             </div>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className={labelClass}>DG Maintenance</label>
+              <input
+                type="number"
+                step="0.01"
+                value={form.dgMaintenance || ""}
+                onChange={(e) => setForm({ ...form, dgMaintenance: parseFloat(e.target.value) || 0 })}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Water Charges</label>
+              <input
+                type="number"
+                step="0.01"
+                value={form.waterCharges || ""}
+                onChange={(e) => setForm({ ...form, waterCharges: parseFloat(e.target.value) || 0 })}
+                className={inputClass}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Live calculations */}
@@ -291,6 +317,30 @@ export default function EditElectricityBillPage({
                 <span>Min Charge ({minChargeUnits} x {kva})</span>
                 <span>{formatCurrency(minimumCharge)}</span>
               </div>
+              {form.bwssbCharges > 0 && (
+                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>BWSSB</span>
+                  <span>{formatCurrency(form.bwssbCharges)}</span>
+                </div>
+              )}
+              {form.maintenance > 0 && (
+                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>Maintenance</span>
+                  <span>{formatCurrency(form.maintenance)}</span>
+                </div>
+              )}
+              {form.dgMaintenance > 0 && (
+                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>DG Maintenance</span>
+                  <span>{formatCurrency(form.dgMaintenance)}</span>
+                </div>
+              )}
+              {form.waterCharges > 0 && (
+                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>Water Charges</span>
+                  <span>{formatCurrency(form.waterCharges)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-gray-300 mt-2">
                 <span>Net Payable</span>
                 <span>{formatCurrency(netPayable)}</span>
