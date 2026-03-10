@@ -45,14 +45,6 @@ export interface ElectricityBillData {
   netPayable: number;
 }
 
-// Split address into lines by newline
-function addressLines(addr: string): string[] {
-  if (addr.includes("\n")) {
-    return addr.split("\n").map((l) => l.trim()).filter(Boolean);
-  }
-  return [addr.trim()];
-}
-
 // No-border cell helper for tables
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function noBorder(content: Record<string, any>): any {
@@ -62,17 +54,9 @@ function noBorder(content: Record<string, any>): any {
 export async function generateElectricityBillPDF(data: ElectricityBillData): Promise<Buffer> {
   const printer = new PdfPrinter(fonts);
 
-  const senderLines = addressLines(data.senderAddress);
+  const senderAddr = data.senderAddress.replace(/\n/g, ", ").replace(/,\s*,/g, ",").replace(/\s+/g, " ").trim();
   const tenantAddr = data.tenantAddress.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
   const monthName = data.month.charAt(0) + data.month.slice(1).toUpperCase();
-
-  // Sender address centered lines
-  const senderAddrContent = senderLines.map((line) => ({
-    text: line,
-    fontSize: 10,
-    alignment: "center" as const,
-    margin: [0, 1, 0, 1] as [number, number, number, number],
-  }));
 
   // Build additional charges rows for the charges table
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -128,7 +112,7 @@ export async function generateElectricityBillPDF(data: ElectricityBillData): Pro
                 stack: [
                   { text: data.senderName, fontSize: 16, bold: true, alignment: "center" },
                   { text: data.buildingName, fontSize: 13, bold: true, alignment: "center", margin: [0, 3, 0, 3] },
-                  ...senderAddrContent,
+                  { text: senderAddr, fontSize: 10, alignment: "center", margin: [0, 1, 0, 1] },
                 ],
                 border: [false, false, false, true],
                 margin: [0, 0, 0, 8],
