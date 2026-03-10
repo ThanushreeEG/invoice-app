@@ -97,6 +97,7 @@ export async function POST(request: Request) {
         maintenance: bill.maintenance,
         dgMaintenance: bill.dgMaintenance,
         waterCharges: bill.waterCharges,
+        invoiceNo: bill.invoiceNo || undefined,
         netPayable: bill.netPayable,
       });
 

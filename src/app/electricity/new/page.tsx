@@ -42,6 +42,7 @@ interface TenantBill {
   maintenance: number;
   dgMaintenance: number;
   waterCharges: number;
+  invoiceNo: string;
   hasLastReading: boolean;
 }
 
@@ -117,6 +118,7 @@ export default function NewElectricityBillPage() {
           maintenance: tenant.elecMaintenance,
           dgMaintenance: tenant.elecDgMaintenance,
           waterCharges: tenant.elecWaterCharges,
+          invoiceNo: "",
           hasLastReading: false,
         },
       ]);
@@ -139,6 +141,7 @@ export default function NewElectricityBillPage() {
           maintenance: t.elecMaintenance,
           dgMaintenance: t.elecDgMaintenance,
           waterCharges: t.elecWaterCharges,
+          invoiceNo: "",
           hasLastReading: false,
         }))
       );
@@ -164,7 +167,7 @@ export default function NewElectricityBillPage() {
     setStep("details");
   };
 
-  const updateField = (tenantId: string, field: string, value: number) => {
+  const updateField = (tenantId: string, field: string, value: number | string) => {
     setSelected(
       selected.map((s) =>
         s.tenantId === tenantId ? { ...s, [field]: value } : s
@@ -195,6 +198,7 @@ export default function NewElectricityBillPage() {
             maintenance: s.maintenance,
             dgMaintenance: s.dgMaintenance,
             waterCharges: s.waterCharges,
+            invoiceNo: s.invoiceNo,
           })),
         }),
       });
@@ -262,6 +266,7 @@ export default function NewElectricityBillPage() {
             maintenance: s.maintenance,
             dgMaintenance: s.dgMaintenance,
             waterCharges: s.waterCharges,
+            invoiceNo: s.invoiceNo,
           })),
         }),
       });
@@ -315,6 +320,7 @@ export default function NewElectricityBillPage() {
             maintenance: s.maintenance,
             dgMaintenance: s.dgMaintenance,
             waterCharges: s.waterCharges,
+            invoiceNo: s.invoiceNo,
           })),
         }),
       });
@@ -513,6 +519,19 @@ export default function NewElectricityBillPage() {
                   <p className="text-sm text-gray-500 mb-4">
                     {item.tenant.propertyAddress} | CT Ratio: x{item.tenant.elecMultiplier}
                   </p>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Invoice No
+                    </label>
+                    <input
+                      type="text"
+                      value={item.invoiceNo}
+                      onChange={(e) => updateField(item.tenantId, "invoiceNo", e.target.value)}
+                      className="w-full sm:w-1/2 px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Optional"
+                    />
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div>
@@ -743,6 +762,9 @@ export default function NewElectricityBillPage() {
 
                   <div className="mb-4">
                     <div className="text-sm text-gray-500">To</div>
+                    {item.invoiceNo && (
+                      <div className="font-semibold text-sm">Invoice No: {item.invoiceNo}</div>
+                    )}
                     <div className="font-semibold">{item.tenant.name}</div>
                     <div className="text-sm text-gray-600">{item.tenant.propertyAddress}</div>
                   </div>

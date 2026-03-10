@@ -125,6 +125,7 @@ model ElectricityBill {
   dgMaintenance       Float     @default(0)
   waterCharges        Float     @default(0)
   netPayable          Float
+  invoiceNo           String    @default("")
   status              String    @default("DRAFT")
   sentAt              DateTime?
   createdAt           DateTime  @default(now())

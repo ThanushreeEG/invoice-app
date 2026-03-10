@@ -65,6 +65,7 @@ export async function PUT(
   const maintenance = body.maintenance || 0;
   const dgMaintenance = body.dgMaintenance || 0;
   const waterCharges = body.waterCharges || 0;
+  const invoiceNo = body.invoiceNo || "";
   const netPayable = totalAmount + minimumCharge + bwssbCharges + maintenance + dgMaintenance + waterCharges;
 
   const monthIndex = [
@@ -97,6 +98,7 @@ export async function PUT(
       maintenance,
       dgMaintenance,
       waterCharges,
+      invoiceNo,
       netPayable,
     },
     include: { tenant: true, sender: true, building: true },

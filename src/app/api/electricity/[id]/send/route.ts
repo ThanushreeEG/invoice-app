@@ -57,6 +57,7 @@ export async function POST(
     maintenance: bill.maintenance,
     dgMaintenance: bill.dgMaintenance,
     waterCharges: bill.waterCharges,
+    invoiceNo: bill.invoiceNo || undefined,
     netPayable: bill.netPayable,
   });
 

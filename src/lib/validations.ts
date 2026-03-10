@@ -99,6 +99,7 @@ const electricityTenantSchema = z.object({
   maintenance: z.coerce.number().min(0).optional().default(0),
   dgMaintenance: z.coerce.number().min(0).optional().default(0),
   waterCharges: z.coerce.number().min(0).optional().default(0),
+  invoiceNo: z.string().optional().default(""),
 });
 
 export const createElectricityBillSchema = z.object({
@@ -122,6 +123,7 @@ export const updateElectricityBillSchema = z.object({
   maintenance: z.coerce.number().min(0).optional().default(0),
   dgMaintenance: z.coerce.number().min(0).optional().default(0),
   waterCharges: z.coerce.number().min(0).optional().default(0),
+  invoiceNo: z.string().optional().default(""),
 });
 
 // ── Bulk Send ──

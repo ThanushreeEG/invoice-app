@@ -49,6 +49,7 @@ export default function EditElectricityBillPage({
     maintenance: 0,
     dgMaintenance: 0,
     waterCharges: 0,
+    invoiceNo: "",
   });
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export default function EditElectricityBillPage({
         maintenance: bill.maintenance,
         dgMaintenance: bill.dgMaintenance,
         waterCharges: bill.waterCharges,
+        invoiceNo: bill.invoiceNo || "",
       });
       setLoading(false);
     }).catch(() => {
@@ -191,6 +193,20 @@ export default function EditElectricityBillPage({
                 className={inputClass}
               />
             </div>
+          </div>
+        </div>
+
+        {/* Invoice No */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+          <div>
+            <label className={labelClass}>Invoice No</label>
+            <input
+              type="text"
+              value={form.invoiceNo}
+              onChange={(e) => setForm({ ...form, invoiceNo: e.target.value })}
+              className={inputClass}
+              placeholder="Optional"
+            />
           </div>
         </div>
 

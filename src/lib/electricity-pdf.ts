@@ -20,6 +20,7 @@ export interface ElectricityBillData {
   buildingName: string;
   senderAddress: string;
   senderSignature?: string;
+  invoiceNo?: string;
   tenantName: string;
   tenantAddress: string;
   month: string;
@@ -154,6 +155,9 @@ export async function generateElectricityBillPDF(data: ElectricityBillData): Pro
         ],
         margin: [0, 0, 0, 2],
       },
+      ...(data.invoiceNo
+        ? [{ text: `Invoice No: ${data.invoiceNo}`, fontSize: 11, bold: true, margin: [0, 0, 0, 2] as [number, number, number, number] }]
+        : []),
       { text: data.tenantName, fontSize: 11, bold: true, margin: [0, 0, 0, 2] },
       { text: tenantAddr, fontSize: 10, color: "#444444", margin: [0, 0, 0, 18] },
 

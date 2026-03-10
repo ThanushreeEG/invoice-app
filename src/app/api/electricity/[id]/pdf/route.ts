@@ -44,6 +44,7 @@ export async function GET(
     maintenance: bill.maintenance,
     dgMaintenance: bill.dgMaintenance,
     waterCharges: bill.waterCharges,
+    invoiceNo: bill.invoiceNo || undefined,
     netPayable: bill.netPayable,
   });
 
