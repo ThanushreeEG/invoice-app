@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
 
   // Create session
   const token = generateSessionToken();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+  const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
 
   await prisma.session.create({
     data: {
