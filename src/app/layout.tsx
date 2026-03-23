@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/apple-icon" />
       </head>
       <body className="antialiased">
         <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
