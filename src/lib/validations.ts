@@ -126,6 +126,31 @@ export const updateElectricityBillSchema = z.object({
   invoiceNo: z.string().optional().default(""),
 });
 
+// ── Water Bills ──
+
+const waterTenantSchema = z.object({
+  tenantId: z.string().min(1, "Tenant ID is required."),
+  waterCharges: z.coerce.number().min(0, "Water charges must be >= 0."),
+  invoiceNo: z.string().optional().default(""),
+});
+
+export const createWaterBillSchema = z.object({
+  senderId: z.string().min(1, "Please select a sender."),
+  buildingId: z.string().min(1, "Please select a building."),
+  month: z.enum(MONTHS, { message: "Invalid month." }),
+  year: z.coerce.number().int().min(2000).max(2100),
+  tenants: z.array(waterTenantSchema).min(1, "Please select at least one tenant."),
+});
+
+export const updateWaterBillSchema = z.object({
+  senderId: z.string().min(1),
+  buildingId: z.string().min(1),
+  month: z.enum(MONTHS, { message: "Invalid month." }),
+  year: z.coerce.number().int().min(2000).max(2100),
+  waterCharges: z.coerce.number().min(0, "Water charges must be >= 0."),
+  invoiceNo: z.string().optional().default(""),
+});
+
 // ── Bulk Send ──
 
 export const bulkSendSchema = z.object({
@@ -133,6 +158,10 @@ export const bulkSendSchema = z.object({
 });
 
 export const bulkSendElectricitySchema = z.object({
+  billIds: z.array(z.string().min(1)).min(1, "No bills selected."),
+});
+
+export const bulkSendWaterSchema = z.object({
   billIds: z.array(z.string().min(1)).min(1, "No bills selected."),
 });
 

@@ -22,6 +22,11 @@ interface Building {
   address: string;
 }
 
+interface AllowedEmail {
+  id: string;
+  email: string;
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
     senderPhone: "",
@@ -42,16 +47,27 @@ export default function SettingsPage() {
   const [showAddSender, setShowAddSender] = useState(false);
   const [newBuilding, setNewBuilding] = useState({ name: "", address: "" });
   const [showAddBuilding, setShowAddBuilding] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [allowedEmails, setAllowedEmails] = useState<AllowedEmail[]>([]);
+  const [newAllowedEmail, setNewAllowedEmail] = useState("");
 
   useEffect(() => {
     Promise.all([
       fetch("/api/settings").then((r) => r.json()),
       fetch("/api/senders").then((r) => r.json()),
       fetch("/api/buildings").then((r) => r.json()),
-    ]).then(([settingsData, sendersData, buildingsData]) => {
+      fetch("/api/auth/me").then((r) => r.json()),
+    ]).then(([settingsData, sendersData, buildingsData, meData]) => {
       setSettings((prev) => ({ ...prev, ...settingsData }));
       setSenders(sendersData);
       setBuildings(buildingsData);
+      if (meData?.user?.role === "admin") {
+        setIsAdmin(true);
+        fetch("/api/auth/allowed-emails")
+          .then((r) => r.json())
+          .then((emails) => setAllowedEmails(emails))
+          .catch(() => {});
+      }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -466,79 +482,104 @@ export default function SettingsPage() {
       {/* Email Configuration */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
-          Email Configuration (Gmail)
+          Email (Gmail)
         </h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Use a Gmail App Password (not your regular password). Go to Google
-          Account &gt; Security &gt; 2-Step Verification &gt; App passwords.
-        </p>
-
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>SMTP Host</label>
-              <input
-                type="text"
-                className={inputClass}
-                value={settings.smtpHost}
-                onChange={(e) =>
-                  setSettings({ ...settings, smtpHost: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className={labelClass}>SMTP Port</label>
-              <input
-                type="number"
-                className={inputClass}
-                value={settings.smtpPort}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    smtpPort: parseInt(e.target.value),
-                  })
-                }
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className={labelClass}>Gmail Address *</label>
-            <input
-              type="email"
-              className={inputClass}
-              value={settings.smtpUser}
-              onChange={(e) =>
-                setSettings({ ...settings, smtpUser: e.target.value })
-              }
-              placeholder="your.email@gmail.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="smtpPass" className={labelClass}>Gmail App Password *</label>
-            <input
-              id="smtpPass"
-              type="password"
-              className={inputClass}
-              value={settings.smtpPass}
-              onChange={(e) =>
-                setSettings({ ...settings, smtpPass: e.target.value })
-              }
-              placeholder="xxxx xxxx xxxx xxxx"
-              autoComplete="new-password"
-            />
-          </div>
-
-          <button
-            onClick={handleTestEmail}
-            disabled={testing}
-            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
-          >
-            {testing ? "Sending..." : "Send Test Email"}
-          </button>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+          <p className="text-sm text-gray-700">
+            Emails are sent via your Google account. No extra configuration needed.
+          </p>
         </div>
+
+        <button
+          onClick={handleTestEmail}
+          disabled={testing}
+          className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+        >
+          {testing ? "Sending..." : "Send Test Email to Myself"}
+        </button>
       </div>
+
+      {/* Allowed Users (Admin only) */}
+      {isAdmin && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">
+            Allowed Users
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Only these email addresses can sign in. You (admin) always have access.
+          </p>
+
+          <div className="space-y-3">
+            {allowedEmails.map((item) => (
+              <div key={item.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2">
+                <span className="text-sm text-gray-700">{item.email}</span>
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetch("/api/auth/allowed-emails", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: item.id }),
+                      });
+                      setAllowedEmails(allowedEmails.filter((e) => e.id !== item.id));
+                      toast.success("Removed!");
+                    } catch {
+                      toast.error("Failed to remove.");
+                    }
+                  }}
+                  className="text-red-500 hover:text-red-700 text-sm font-medium"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+
+            <div className="flex gap-2">
+              <input
+                type="email"
+                className={inputClass}
+                value={newAllowedEmail}
+                onChange={(e) => setNewAllowedEmail(e.target.value)}
+                placeholder="user@gmail.com"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    document.getElementById("addEmailBtn")?.click();
+                  }
+                }}
+              />
+              <button
+                id="addEmailBtn"
+                onClick={async () => {
+                  if (!newAllowedEmail) return;
+                  try {
+                    const res = await fetch("/api/auth/allowed-emails", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email: newAllowedEmail }),
+                    });
+                    if (res.ok) {
+                      const added = await res.json();
+                      setAllowedEmails([added, ...allowedEmails]);
+                      setNewAllowedEmail("");
+                      toast.success("Email added!");
+                    } else {
+                      const data = await res.json();
+                      toast.error(data.error || "Failed to add.");
+                    }
+                  } catch {
+                    toast.error("Failed to add email.");
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 whitespace-nowrap"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Save Button */}
       <button

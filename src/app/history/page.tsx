@@ -36,6 +36,20 @@ interface ElectricityBill {
   sender: { name: string };
 }
 
+interface WaterBill {
+  id: string;
+  month: string;
+  year: number;
+  waterCharges: number;
+  netPayable: number;
+  invoiceNo: string;
+  status: string;
+  sentAt: string | null;
+  createdAt: string;
+  tenant: { name: string; email: string; ccEmails: string };
+  sender: { name: string };
+}
+
 interface Pagination {
   page: number;
   limit: number;
@@ -89,9 +103,18 @@ export default function HistoryPage() {
   const [ebLoading, setEbLoading] = useState(true);
   const [ebSendingId, setEbSendingId] = useState<string | null>(null);
 
+  // Water Bill state
+  const [waterBills, setWaterBills] = useState<WaterBill[]>([]);
+  const [wbPagination, setWbPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [wbPage, setWbPage] = useState(1);
+  const [wbSearch, setWbSearch] = useState("");
+  const [wbStatus, setWbStatus] = useState("");
+  const [wbLoading, setWbLoading] = useState(true);
+  const [wbSendingId, setWbSendingId] = useState<string | null>(null);
+
   // Send modal state
   const [sendModal, setSendModal] = useState<{
-    type: "invoice" | "eb";
+    type: "invoice" | "eb" | "water";
     id: string;
     pdfUrl: string;
     title: string;
@@ -125,8 +148,22 @@ export default function HistoryPage() {
       .catch(() => setEbLoading(false));
   }, [ebPage, ebSearch, ebStatus]);
 
+  // Fetch Water Bills
+  const fetchWaterBills = useCallback((p = wbPage, s = wbSearch, st = wbStatus) => {
+    const params = new URLSearchParams();
+    params.set("page", String(p));
+    params.set("limit", "10");
+    if (s) params.set("search", s);
+    if (st) params.set("status", st);
+    fetch(`/api/water?${params}`)
+      .then((res) => res.json())
+      .then((data) => { setWaterBills(data.bills); setWbPagination(data.pagination); setWbLoading(false); })
+      .catch(() => setWbLoading(false));
+  }, [wbPage, wbSearch, wbStatus]);
+
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
   useEffect(() => { fetchBills(); }, [fetchBills]);
+  useEffect(() => { fetchWaterBills(); }, [fetchWaterBills]);
 
   // Invoice handlers
   const handleInvSearch = (v: string) => { setInvSearch(v); setInvPage(1); fetchInvoices(1, v, invStatus); };
@@ -200,12 +237,51 @@ export default function HistoryPage() {
     } catch { toast.error("Failed to delete bill."); }
   };
 
+  // Water Bill handlers
+  const handleWbSearch = (v: string) => { setWbSearch(v); setWbPage(1); fetchWaterBills(1, v, wbStatus); };
+  const handleWbStatus = (v: string) => { setWbStatus(v); setWbPage(1); fetchWaterBills(1, wbSearch, v); };
+  const handleWbPage = (p: number) => { setWbPage(p); fetchWaterBills(p, wbSearch, wbStatus); };
+
+  const openWbSendModal = (bill: WaterBill) => {
+    setSendModal({
+      type: "water",
+      id: bill.id,
+      pdfUrl: `/api/water/${bill.id}/pdf`,
+      title: `Send Water Bill - ${bill.tenant.name} - ${bill.month} ${bill.year}`,
+      email: bill.tenant.email,
+      ccEmails: bill.tenant.ccEmails,
+    });
+  };
+
+  const handleWbSend = async (id: string) => {
+    setWbSendingId(id);
+    try {
+      const res = await fetch(`/api/water/${id}/send`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) { toast.success("Water bill sent!"); fetchWaterBills(); } else { toast.error(data.error || "Failed to send."); }
+    } catch { toast.error("Failed to send water bill."); }
+    setWbSendingId(null);
+    setSendModal(null);
+  };
+
+  const handleWbDelete = async (id: string) => {
+    if (!confirm("Delete this draft water bill?")) return;
+    try {
+      const res = await fetch(`/api/water/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) { toast.success("Water bill deleted!"); fetchWaterBills(); } else { toast.error(data.error || "Failed to delete."); }
+    } catch { toast.error("Failed to delete water bill."); }
+  };
+
   // Download helpers
   const downloadInvPDF = (id: string, num: string) => {
     const a = document.createElement("a"); a.href = `/api/invoices/${id}/pdf`; a.download = `Invoice-${num}.pdf`; a.click();
   };
   const downloadEbPDF = (id: string, tenant: string, month: string, year: number) => {
     const a = document.createElement("a"); a.href = `/api/electricity/${id}/pdf`; a.download = `EB-Bill-${tenant}-${month}-${year}.pdf`; a.click();
+  };
+  const downloadWbPDF = (id: string, tenant: string, month: string, year: number) => {
+    const a = document.createElement("a"); a.href = `/api/water/${id}/pdf`; a.download = `Water-Bill-${tenant}-${month}-${year}.pdf`; a.click();
   };
 
   // Shared pagination component
@@ -377,19 +453,85 @@ export default function HistoryPage() {
         )}
       </section>
 
+      {/* ═══════════════════════════════════════ */}
+      {/* WATER BILLS SECTION */}
+      {/* ═══════════════════════════════════════ */}
+      <section className="mt-10">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-gray-700">Water Bills</h2>
+          <Link href="/water/new" className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors">+ New Water Bill</Link>
+        </div>
+
+        <FilterBar search={wbSearch} onSearch={handleWbSearch} status={wbStatus} onStatus={handleWbStatus} placeholder="Search by tenant name..." />
+
+        {wbLoading ? (
+          <div className="text-gray-500 text-sm py-6 text-center">Loading water bills...</div>
+        ) : waterBills.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-500 text-sm">
+            {wbSearch || wbStatus ? "No water bills match your filters." : "No water bills yet."}
+          </div>
+        ) : (
+          <>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
+                    <th className="text-left px-4 py-3 font-semibold">Tenant</th>
+                    <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Period</th>
+                    <th className="text-right px-4 py-3 font-semibold">Net Payable</th>
+                    <th className="text-center px-4 py-3 font-semibold">Status</th>
+                    <th className="text-right px-4 py-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {waterBills.map((bill) => (
+                    <tr key={bill.id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{bill.tenant.name}</div>
+                        {bill.status === "SENT" && bill.sentAt && <div className="text-xs text-green-600">Sent {formatDate(bill.sentAt)}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{bill.month} {bill.year}</td>
+                      <td className="px-4 py-3 text-right font-medium">{formatCurrency(bill.netPayable)}</td>
+                      <td className="px-4 py-3 text-center">{statusBadge(bill.status)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button onClick={() => downloadWbPDF(bill.id, bill.tenant.name, bill.month, bill.year)} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200">PDF</button>
+                          <button onClick={() => openWbSendModal(bill)} disabled={wbSendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
+                            className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 disabled:opacity-50">
+                            {wbSendingId === bill.id ? "..." : "Send"}
+                          </button>
+                          {bill.status !== "SENT" && (
+                            <>
+                              <button onClick={() => router.push(`/water/${bill.id}/edit`)} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100">Edit</button>
+                              <button onClick={() => handleWbDelete(bill.id)} className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100">Del</button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <PaginationControls pagination={wbPagination} currentPage={wbPage} onPageChange={handleWbPage} />
+          </>
+        )}
+      </section>
+
       <SendConfirmModal
         open={sendModal !== null}
         onClose={() => setSendModal(null)}
         onConfirm={() => {
           if (!sendModal) return;
           if (sendModal.type === "invoice") handleInvSend(sendModal.id);
-          else handleEbSend(sendModal.id);
+          else if (sendModal.type === "eb") handleEbSend(sendModal.id);
+          else handleWbSend(sendModal.id);
         }}
         pdfUrl={sendModal?.pdfUrl}
         title={sendModal?.title || ""}
         recipientEmail={sendModal?.email || ""}
         ccEmails={sendModal?.ccEmails}
-        sending={invSendingId !== null || ebSendingId !== null}
+        sending={invSendingId !== null || ebSendingId !== null || wbSendingId !== null}
       />
     </div>
   );

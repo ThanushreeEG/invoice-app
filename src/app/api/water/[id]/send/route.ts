@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateElectricityBillPDF } from "@/lib/electricity-pdf";
-import { sendElectricityBillEmailViaGmail } from "@/lib/gmail";
+import { generateWaterBillPDF } from "@/lib/water-pdf";
+import { sendWaterBillEmailViaGmail } from "@/lib/gmail";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { requireAuth } from "@/lib/auth";
 import { format } from "date-fns";
@@ -13,7 +13,7 @@ export async function POST(
   const session = await requireAuth();
   const { id } = await params;
 
-  const bill = await prisma.electricityBill.findUnique({
+  const bill = await prisma.waterBill.findUnique({
     where: { id },
     include: { tenant: true, sender: true, building: true },
   });
@@ -22,7 +22,7 @@ export async function POST(
     return NextResponse.json({ error: "Bill not found." }, { status: 404 });
   }
 
-  const pdfBuffer = await generateElectricityBillPDF({
+  const pdfBuffer = await generateWaterBillPDF({
     senderName: bill.sender.name,
     buildingName: bill.building?.name || "",
     senderAddress: bill.building?.address || "",
@@ -31,24 +31,9 @@ export async function POST(
     month: bill.month,
     year: bill.year,
     billDate: format(bill.billDate, "dd/MM/yyyy"),
-    openingReading: bill.openingReading,
-    closingReading: bill.closingReading,
-    unitsConsumed: bill.unitsConsumed,
-    multiplier: bill.tenant.elecMultiplier,
-    totalUnitsConsumed: bill.totalUnitsConsumed,
-    miscUnits: bill.miscUnits,
-    totalUnitsCharged: bill.totalUnitsCharged,
-    ratePerUnit: bill.ratePerUnit,
-    totalAmount: bill.totalAmount,
-    minChargeUnits: bill.minChargeUnits,
-    kva: bill.kva,
-    minimumCharge: bill.minimumCharge,
-    bwssbCharges: bill.bwssbCharges,
-    maintenance: bill.maintenance,
-    dgMaintenance: bill.dgMaintenance,
     waterCharges: bill.waterCharges,
-    invoiceNo: bill.invoiceNo || undefined,
     netPayable: bill.netPayable,
+    invoiceNo: bill.invoiceNo || undefined,
   });
 
   if (!bill.tenant.email && !bill.tenant.ccEmails) {
@@ -64,7 +49,7 @@ export async function POST(
     : bill.tenant.ccEmails.split(",").slice(1).map((e: string) => e.trim()).filter(Boolean).join(", ") || undefined;
 
   try {
-    await sendElectricityBillEmailViaGmail({
+    await sendWaterBillEmailViaGmail({
       userId: session.user.id,
       senderName: bill.sender.name,
       to: toEmail,
@@ -76,14 +61,14 @@ export async function POST(
       pdfBuffer,
     });
 
-    await prisma.electricityBill.update({
+    await prisma.waterBill.update({
       where: { id },
       data: { status: "SENT", sentAt: new Date() },
     });
 
-    return NextResponse.json({ success: true, message: "Electricity bill sent successfully!" });
+    return NextResponse.json({ success: true, message: "Water bill sent successfully!" });
   } catch (error) {
-    await prisma.electricityBill.update({
+    await prisma.waterBill.update({
       where: { id },
       data: { status: "FAILED" },
     });

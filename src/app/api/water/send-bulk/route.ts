@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateElectricityBillPDF } from "@/lib/electricity-pdf";
-import { sendElectricityBillEmailViaGmail } from "@/lib/gmail";
+import { generateWaterBillPDF } from "@/lib/water-pdf";
+import { sendWaterBillEmailViaGmail } from "@/lib/gmail";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { requireAuth } from "@/lib/auth";
 import { format } from "date-fns";
-import { bulkSendElectricitySchema, formatZodError } from "@/lib/validations";
+import { bulkSendWaterSchema, formatZodError } from "@/lib/validations";
 
 export async function POST(request: Request) {
   const session = await requireAuth();
   const raw = await request.json();
-  const result = bulkSendElectricitySchema.safeParse(raw);
+  const result = bulkSendWaterSchema.safeParse(raw);
 
   if (!result.success) {
     return NextResponse.json(
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   }> = [];
 
   for (const billId of billIds) {
-    const bill = await prisma.electricityBill.findUnique({
+    const bill = await prisma.waterBill.findUnique({
       where: { id: billId },
       include: { tenant: true, sender: true, building: true },
     });
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       : bill.tenant.ccEmails.split(",").slice(1).map((e: string) => e.trim()).filter(Boolean).join(", ") || undefined;
 
     try {
-      const pdfBuffer = await generateElectricityBillPDF({
+      const pdfBuffer = await generateWaterBillPDF({
         senderName: bill.sender.name,
         buildingName: bill.building?.name || "",
         senderAddress: bill.building?.address || "",
@@ -69,27 +69,12 @@ export async function POST(request: Request) {
         month: bill.month,
         year: bill.year,
         billDate: format(bill.billDate, "dd/MM/yyyy"),
-        openingReading: bill.openingReading,
-        closingReading: bill.closingReading,
-        unitsConsumed: bill.unitsConsumed,
-        multiplier: bill.tenant.elecMultiplier,
-        totalUnitsConsumed: bill.totalUnitsConsumed,
-        miscUnits: bill.miscUnits,
-        totalUnitsCharged: bill.totalUnitsCharged,
-        ratePerUnit: bill.ratePerUnit,
-        totalAmount: bill.totalAmount,
-        minChargeUnits: bill.minChargeUnits,
-        kva: bill.kva,
-        minimumCharge: bill.minimumCharge,
-        bwssbCharges: bill.bwssbCharges,
-        maintenance: bill.maintenance,
-        dgMaintenance: bill.dgMaintenance,
         waterCharges: bill.waterCharges,
-        invoiceNo: bill.invoiceNo || undefined,
         netPayable: bill.netPayable,
+        invoiceNo: bill.invoiceNo || undefined,
       });
 
-      await sendElectricityBillEmailViaGmail({
+      await sendWaterBillEmailViaGmail({
         userId: session.user.id,
         senderName: bill.sender.name,
         to: toEmail,
@@ -101,7 +86,7 @@ export async function POST(request: Request) {
         pdfBuffer,
       });
 
-      await prisma.electricityBill.update({
+      await prisma.waterBill.update({
         where: { id: billId },
         data: { status: "SENT", sentAt: new Date() },
       });
@@ -112,7 +97,7 @@ export async function POST(request: Request) {
         success: true,
       });
     } catch (error) {
-      await prisma.electricityBill.update({
+      await prisma.waterBill.update({
         where: { id: billId },
         data: { status: "FAILED" },
       });

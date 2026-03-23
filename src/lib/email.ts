@@ -125,6 +125,63 @@ export async function sendElectricityBillEmail({
   return info;
 }
 
+interface SendWaterBillEmailParams {
+  settings: EmailSettings;
+  to: string;
+  cc?: string;
+  tenantName: string;
+  month: string;
+  year: number;
+  netPayable: string;
+  pdfBuffer: Buffer;
+}
+
+export async function sendWaterBillEmail({
+  settings,
+  to,
+  cc,
+  tenantName,
+  month,
+  year,
+  netPayable,
+  pdfBuffer,
+}: SendWaterBillEmailParams) {
+  const transporter = nodemailer.createTransport({
+    host: settings.smtpHost,
+    port: settings.smtpPort,
+    secure: settings.smtpPort === 465,
+    auth: {
+      user: settings.smtpUser,
+      pass: settings.smtpPass,
+    },
+  });
+
+  const info = await transporter.sendMail({
+    from: `"${settings.senderName}" <${settings.smtpUser}>`,
+    to,
+    ...(cc ? { cc } : {}),
+    subject: `Water Bill - ${month} ${year}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <p>Dear ${tenantName},</p>
+        <p>Please find attached the water bill for the month of <strong>${month} ${year}</strong>.</p>
+        <p><strong>Net Payable:</strong> ${netPayable}</p>
+        <br/>
+        <p>Regards,<br/>${settings.senderName}</p>
+      </div>
+    `,
+    attachments: [
+      {
+        filename: `Water-Bill-${month}-${year}.pdf`,
+        content: pdfBuffer,
+        contentType: "application/pdf",
+      },
+    ],
+  });
+
+  return info;
+}
+
 export async function sendTestEmail(settings: EmailSettings) {
   const transporter = nodemailer.createTransport({
     host: settings.smtpHost,

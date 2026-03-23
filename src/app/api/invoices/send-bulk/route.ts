@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateInvoicePDF } from "@/lib/pdf";
-import { sendInvoiceEmail } from "@/lib/email";
+import { sendInvoiceEmailViaGmail } from "@/lib/gmail";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { decrypt } from "@/lib/crypto";
+import { requireAuth } from "@/lib/auth";
 import { format } from "date-fns";
 import { bulkSendSchema, formatZodError } from "@/lib/validations";
 
 export async function POST(request: Request) {
+  const session = await requireAuth();
   const raw = await request.json();
   const result = bulkSendSchema.safeParse(raw);
 
@@ -19,19 +20,6 @@ export async function POST(request: Request) {
   }
 
   const { invoiceIds } = result.data;
-
-  const settings = await prisma.settings.findUnique({
-    where: { id: "default" },
-  });
-
-  if (!settings || !settings.smtpUser || !settings.smtpPass) {
-    return NextResponse.json(
-      { error: "Please configure your email settings first." },
-      { status: 400 }
-    );
-  }
-
-  const decryptedPass = decrypt(settings.smtpPass);
 
   const results: Array<{
     invoiceId: string;
@@ -69,7 +57,6 @@ export async function POST(request: Request) {
       continue;
     }
 
-    // If no primary email but CC emails exist, use first CC as "to"
     const toEmail = invoice.tenant.email || invoice.tenant.ccEmails.split(",")[0].trim();
     const ccEmail = invoice.tenant.email
       ? (invoice.tenant.ccEmails || undefined)
@@ -98,14 +85,9 @@ export async function POST(request: Request) {
         totalAmount: invoice.totalAmount,
       });
 
-      await sendInvoiceEmail({
-        settings: {
-          smtpHost: settings.smtpHost,
-          smtpPort: settings.smtpPort,
-          smtpUser: settings.smtpUser,
-          smtpPass: decryptedPass,
-          senderName: invoice.sender.name,
-        },
+      await sendInvoiceEmailViaGmail({
+        userId: session.user.id,
+        senderName: invoice.sender.name,
         to: toEmail,
         cc: ccEmail,
         tenantName: invoice.tenant.name,
@@ -142,7 +124,7 @@ export async function POST(request: Request) {
       });
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   return NextResponse.json({ results });
