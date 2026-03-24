@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSenderSchema, formatZodError } from "@/lib/validations";
+import { getSession } from "@/lib/auth";
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const senders = await prisma.sender.findMany({
     where: { isActive: true },
     orderBy: { name: "asc" },
@@ -25,6 +31,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const raw = await request.json();
   const result = createSenderSchema.safeParse(raw);
 

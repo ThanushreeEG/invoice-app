@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { updateSettingsSchema, formatZodError } from "@/lib/validations";
+import { getSession } from "@/lib/auth";
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let settings = await prisma.settings.findUnique({ where: { id: "default" } });
   if (!settings) {
     settings = await prisma.settings.create({ data: { id: "default" } });
@@ -15,6 +21,11 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const raw = await request.json();
 
   // Remove non-updatable fields

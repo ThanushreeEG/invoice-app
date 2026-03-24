@@ -388,6 +388,7 @@ export default function HistoryPage() {
                       <td className="px-4 py-3 font-medium">{inv.invoiceNumber}</td>
                       <td className="px-4 py-3">
                         <div>{inv.tenant.name}</div>
+                        <div className="text-xs text-gray-400 sm:hidden">{inv.sender.name}</div>
                         {inv.status === "SENT" && inv.sentAt && <div className="text-xs text-green-700">Sent {formatDate(inv.sentAt)}</div>}
                       </td>
                       <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{inv.sender.name}</td>

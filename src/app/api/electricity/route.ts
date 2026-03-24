@@ -3,8 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { generateElectricityBillPDF } from "@/lib/electricity-pdf";
 import { format } from "date-fns";
 import { createElectricityBillSchema, formatZodError } from "@/lib/validations";
+import { getSession } from "@/lib/auth";
 
 export async function GET(request: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const tenantId = searchParams.get("tenantId");
@@ -63,6 +69,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const raw = await request.json();
   const result = createElectricityBillSchema.safeParse(raw);
 
