@@ -62,6 +62,15 @@ interface DashboardData {
     status: string;
     tenant: { name: string };
   }>;
+  senderSummaries: Array<{
+    id: string;
+    name: string;
+    invoiceCount: number;
+    baseRent: number;
+    cgst: number;
+    sgst: number;
+    total: number;
+  }>;
 }
 
 export default function DashboardPage() {
@@ -70,6 +79,7 @@ export default function DashboardPage() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedSender, setExpandedSender] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -211,6 +221,61 @@ export default function DashboardPage() {
                   <div className="text-xs text-gray-400">Total GST Collected</div>
                   <div className="text-lg font-bold text-red-600">{formatCurrency(data.totalCgst + data.totalSgst)}</div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Landlord Summary */}
+          {data.senderSummaries && data.senderSummaries.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3">
+                Landlord Summary &mdash; {MONTH_SHORT[selectedMonth]} {selectedYear}
+              </h3>
+              <div className="space-y-2">
+                {data.senderSummaries.map((sender) => (
+                  <div key={sender.id}>
+                    <button
+                      onClick={() => setExpandedSender(expandedSender === sender.id ? null : sender.id)}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
+                          {sender.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-800">{sender.name}</div>
+                          <div className="text-xs text-gray-400">{sender.invoiceCount} invoice{sender.invoiceCount !== 1 ? "s" : ""}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-gray-800">{formatCurrency(sender.total)}</span>
+                        <span className="text-gray-400 text-sm">{expandedSender === sender.id ? "▲" : "▼"}</span>
+                      </div>
+                    </button>
+                    {expandedSender === sender.id && (
+                      <div className="ml-11 mr-4 mb-2 p-3 bg-gray-50 rounded-lg">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                          <div>
+                            <div className="text-xs text-gray-400">Base Rent</div>
+                            <div className="font-semibold text-gray-800">{formatCurrency(sender.baseRent)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-400">CGST</div>
+                            <div className="font-semibold text-amber-600">{formatCurrency(sender.cgst)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-400">SGST</div>
+                            <div className="font-semibold text-amber-600">{formatCurrency(sender.sgst)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-400">Total GST</div>
+                            <div className="font-semibold text-red-600">{formatCurrency(sender.cgst + sender.sgst)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

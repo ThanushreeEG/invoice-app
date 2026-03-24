@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   const month = request.nextUrl.searchParams.get("month") || "";
   const year = parseInt(request.nextUrl.searchParams.get("year") || "0");
 
-  const [totalTenants, allInvoices, allBills, allWaterBills] = await Promise.all([
+  const [totalTenants, allInvoices, allBills, allWaterBills, senders] = await Promise.all([
     prisma.tenant.count({ where: { isActive: true } }),
     prisma.invoice.findMany({
       where: month && year ? { month, year } : undefined,
@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
         status: true,
         createdAt: true,
         tenant: { select: { name: true } },
+        senderId: true,
       },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -53,7 +54,26 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
+    prisma.sender.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
+
+  // Group invoices by sender
+  const senderSummaries = senders.map((sender) => {
+    const senderInvoices = allInvoices.filter((inv) => inv.senderId === sender.id);
+    return {
+      id: sender.id,
+      name: sender.name,
+      invoiceCount: senderInvoices.length,
+      baseRent: senderInvoices.reduce((sum, inv) => sum + inv.baseRent, 0),
+      cgst: senderInvoices.reduce((sum, inv) => sum + inv.cgstAmount, 0),
+      sgst: senderInvoices.reduce((sum, inv) => sum + inv.sgstAmount, 0),
+      total: senderInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0),
+    };
+  }).filter((s) => s.invoiceCount > 0);
 
   return NextResponse.json({
     totalTenants,
@@ -69,5 +89,6 @@ export async function GET(request: NextRequest) {
     waterCount: allWaterBills.length,
     totalWater: allWaterBills.reduce((sum, bill) => sum + bill.netPayable, 0),
     recentWaterBills: allWaterBills.slice(0, 5),
+    senderSummaries,
   });
 }

@@ -50,6 +50,9 @@ export default function InvoicesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [monthFilter, setMonthFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
+  const [periods, setPeriods] = useState<{ month: string; year: number }[]>([]);
   const [sendModal, setSendModal] = useState<{
     id: string;
     pdfUrl: string;

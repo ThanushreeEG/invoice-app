@@ -9,6 +9,7 @@ import SendConfirmModal from "@/components/SendConfirmModal";
 interface Sender {
   id: string;
   name: string;
+  buildingIds: string[];
 }
 
 interface Building {
@@ -58,9 +59,16 @@ export default function NewWaterBillPage() {
       fetch("/api/buildings").then((r) => r.json()),
     ]).then(([sendersData, buildingsData]) => {
       setSenders(sendersData);
-      if (sendersData.length > 0) setSelectedSenderId(sendersData[0].id);
       setBuildings(buildingsData);
-      if (buildingsData.length > 0) setSelectedBuildingId(buildingsData[0].id);
+      if (sendersData.length > 0) {
+        const firstSender = sendersData[0];
+        setSelectedSenderId(firstSender.id);
+        if (firstSender.buildingIds?.length > 0) {
+          setSelectedBuildingId(firstSender.buildingIds[0]);
+        } else if (buildingsData.length > 0) {
+          setSelectedBuildingId(buildingsData[0].id);
+        }
+      }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -247,7 +255,18 @@ export default function NewWaterBillPage() {
   }
 
   const selectedSender = senders.find((s) => s.id === selectedSenderId);
+  const senderBuildings = selectedSender?.buildingIds?.length
+    ? buildings.filter((b) => selectedSender.buildingIds.includes(b.id))
+    : buildings;
   const selectedBuilding = buildings.find((b) => b.id === selectedBuildingId);
+
+  useEffect(() => {
+    if (selectedSender && selectedSender.buildingIds?.length > 0) {
+      if (!selectedSender.buildingIds.includes(selectedBuildingId)) {
+        setSelectedBuildingId(selectedSender.buildingIds[0]);
+      }
+    }
+  }, [selectedSenderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -283,7 +302,7 @@ export default function NewWaterBillPage() {
           Building / Property
         </h2>
         <div className="flex gap-3 flex-wrap">
-          {buildings.map((building) => (
+          {senderBuildings.map((building) => (
             <button
               key={building.id}
               onClick={() => setSelectedBuildingId(building.id)}

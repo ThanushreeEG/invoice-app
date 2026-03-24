@@ -14,6 +14,7 @@ interface Sender {
   name: string;
   gstNumber: string;
   signature: string;
+  buildingIds: string[];
 }
 
 interface Building {
@@ -244,6 +245,46 @@ export default function SettingsPage() {
                       setSenders(updated);
                     }}
                   />
+                </div>
+                <div>
+                  <label className={labelClass}>Assigned Buildings</label>
+                  {buildings.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {buildings.map((b) => (
+                        <label
+                          key={b.id}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors ${
+                            sender.buildingIds?.includes(b.id)
+                              ? "bg-blue-50 border-blue-300 text-blue-700"
+                              : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={sender.buildingIds?.includes(b.id) || false}
+                            onChange={(e) => {
+                              const updated = [...senders];
+                              const currentIds = sender.buildingIds || [];
+                              updated[idx] = {
+                                ...sender,
+                                buildingIds: e.target.checked
+                                  ? [...currentIds, b.id]
+                                  : currentIds.filter((id) => id !== b.id),
+                              };
+                              setSenders(updated);
+                            }}
+                            className="rounded"
+                          />
+                          <span>
+                            {b.name}
+                            {b.address && <span className="text-xs text-gray-400 ml-1">({b.address.replace(/\n/g, ", ")})</span>}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 mt-1">Add buildings first</p>
+                  )}
                 </div>
                 <div>
                   <label className={labelClass}>Signature</label>

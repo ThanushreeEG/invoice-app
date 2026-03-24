@@ -84,6 +84,9 @@ function formatDate(dateStr: string) {
 
 export default function HistoryPage() {
   const router = useRouter();
+  const now = new Date();
+  const [periodMonth, setPeriodMonth] = useState(now.toLocaleString("en-US", { month: "long" }).toUpperCase());
+  const [periodYear, setPeriodYear] = useState(now.getFullYear());
 
   // Invoice state
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -129,11 +132,13 @@ export default function HistoryPage() {
     params.set("limit", "10");
     if (s) params.set("search", s);
     if (st) params.set("status", st);
+    if (periodMonth) params.set("month", periodMonth);
+    if (periodYear) params.set("year", String(periodYear));
     fetch(`/api/invoices?${params}`)
       .then((res) => res.json())
       .then((data) => { setInvoices(data.invoices); setInvPagination(data.pagination); setInvLoading(false); })
       .catch(() => setInvLoading(false));
-  }, [invPage, invSearch, invStatus]);
+  }, [invPage, invSearch, invStatus, periodMonth, periodYear]);
 
   // Fetch EB bills
   const fetchBills = useCallback((p = ebPage, s = ebSearch, st = ebStatus) => {
@@ -142,11 +147,13 @@ export default function HistoryPage() {
     params.set("limit", "10");
     if (s) params.set("search", s);
     if (st) params.set("status", st);
+    if (periodMonth) params.set("month", periodMonth);
+    if (periodYear) params.set("year", String(periodYear));
     fetch(`/api/electricity?${params}`)
       .then((res) => res.json())
       .then((data) => { setBills(data.bills); setEbPagination(data.pagination); setEbLoading(false); })
       .catch(() => setEbLoading(false));
-  }, [ebPage, ebSearch, ebStatus]);
+  }, [ebPage, ebSearch, ebStatus, periodMonth, periodYear]);
 
   // Fetch Water Bills
   const fetchWaterBills = useCallback((p = wbPage, s = wbSearch, st = wbStatus) => {
@@ -155,11 +162,13 @@ export default function HistoryPage() {
     params.set("limit", "10");
     if (s) params.set("search", s);
     if (st) params.set("status", st);
+    if (periodMonth) params.set("month", periodMonth);
+    if (periodYear) params.set("year", String(periodYear));
     fetch(`/api/water?${params}`)
       .then((res) => res.json())
       .then((data) => { setWaterBills(data.bills); setWbPagination(data.pagination); setWbLoading(false); })
       .catch(() => setWbLoading(false));
-  }, [wbPage, wbSearch, wbStatus]);
+  }, [wbPage, wbSearch, wbStatus, periodMonth, periodYear]);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
   useEffect(() => { fetchBills(); }, [fetchBills]);
@@ -315,9 +324,43 @@ export default function HistoryPage() {
     </div>
   );
 
+  const MONTH_NAMES = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
+  const MONTH_SHORT: Record<string, string> = { JANUARY:"Jan",FEBRUARY:"Feb",MARCH:"Mar",APRIL:"Apr",MAY:"May",JUNE:"Jun",JULY:"Jul",AUGUST:"Aug",SEPTEMBER:"Sep",OCTOBER:"Oct",NOVEMBER:"Nov",DECEMBER:"Dec" };
+
+  const goToPrevMonth = () => {
+    const idx = MONTH_NAMES.indexOf(periodMonth);
+    if (idx === 0) { setPeriodMonth(MONTH_NAMES[11]); setPeriodYear(periodYear - 1); }
+    else { setPeriodMonth(MONTH_NAMES[idx - 1]); }
+  };
+  const goToNextMonth = () => {
+    const idx = MONTH_NAMES.indexOf(periodMonth);
+    if (idx === 11) { setPeriodMonth(MONTH_NAMES[0]); setPeriodYear(periodYear + 1); }
+    else { setPeriodMonth(MONTH_NAMES[idx + 1]); }
+  };
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Bill History</h1>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+        <h1 className="text-2xl font-bold text-gray-800">Bill History</h1>
+        <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm border border-gray-200 px-2 py-1.5">
+          <button onClick={goToPrevMonth} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Previous month">
+            &larr;
+          </button>
+          <div className="flex items-center gap-2 px-3">
+            <select value={periodMonth} onChange={(e) => setPeriodMonth(e.target.value)}
+              className="text-sm font-semibold text-gray-800 bg-transparent border-none focus:outline-none cursor-pointer">
+              {MONTH_NAMES.map((m) => <option key={m} value={m}>{MONTH_SHORT[m]}</option>)}
+            </select>
+            <select value={periodYear} onChange={(e) => setPeriodYear(parseInt(e.target.value))}
+              className="text-sm font-semibold text-gray-800 bg-transparent border-none focus:outline-none cursor-pointer">
+              {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          <button onClick={goToNextMonth} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Next month">
+            &rarr;
+          </button>
+        </div>
+      </div>
 
       {/* ═══════════════════════════════════════ */}
       {/* INVOICES SECTION */}
@@ -344,6 +387,7 @@ export default function HistoryPage() {
                   <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
                     <th className="text-left px-4 py-3 font-semibold">Invoice #</th>
                     <th className="text-left px-4 py-3 font-semibold">Tenant</th>
+                    <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Landlord</th>
                     <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Period</th>
                     <th className="text-right px-4 py-3 font-semibold">Amount</th>
                     <th className="text-center px-4 py-3 font-semibold">Status</th>
@@ -358,6 +402,7 @@ export default function HistoryPage() {
                         <div>{inv.tenant.name}</div>
                         {inv.status === "SENT" && inv.sentAt && <div className="text-xs text-green-600">Sent {formatDate(inv.sentAt)}</div>}
                       </td>
+                      <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{inv.sender.name}</td>
                       <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{inv.month} {inv.year}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatCurrency(inv.totalAmount)}</td>
                       <td className="px-4 py-3 text-center">{statusBadge(inv.status)}</td>

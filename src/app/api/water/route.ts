@@ -12,9 +12,14 @@ export async function GET(request: Request) {
   const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20")));
 
+  const month = searchParams.get("month");
+  const year = searchParams.get("year");
+
   const where: Record<string, unknown> = {};
   if (status) where.status = status;
   if (tenantId) where.tenantId = tenantId;
+  if (month) where.month = month;
+  if (year) where.year = parseInt(year);
   if (search) {
     where.OR = [
       { tenant: { name: { contains: search } } },

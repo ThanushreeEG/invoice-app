@@ -6,8 +6,22 @@ export async function GET() {
   const senders = await prisma.sender.findMany({
     where: { isActive: true },
     orderBy: { name: "asc" },
+    include: {
+      buildings: {
+        include: { building: { select: { id: true, name: true } } },
+      },
+    },
   });
-  return NextResponse.json(senders);
+
+  // Flatten buildings for easier frontend use
+  const result = senders.map((s) => ({
+    ...s,
+    buildingIds: s.buildings.map((sb) => sb.buildingId),
+    buildingNames: s.buildings.map((sb) => sb.building.name),
+    buildings: undefined,
+  }));
+
+  return NextResponse.json(result);
 }
 
 export async function POST(request: Request) {

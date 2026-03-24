@@ -18,6 +18,8 @@ export async function PUT(
   }
 
   const data = result.data;
+  console.log("Updating sender:", id, "buildingIds:", data.buildingIds);
+
   const sender = await prisma.sender.update({
     where: { id },
     data: {
@@ -26,6 +28,22 @@ export async function PUT(
       signature: data.signature !== undefined ? data.signature : undefined,
     },
   });
+
+  // Update building assignments if provided
+  if (data.buildingIds) {
+    // Remove all existing assignments
+    await prisma.senderBuilding.deleteMany({ where: { senderId: id } });
+
+    // Create new assignments
+    if (data.buildingIds.length > 0) {
+      await prisma.senderBuilding.createMany({
+        data: data.buildingIds.map((buildingId: string) => ({
+          senderId: id,
+          buildingId,
+        })),
+      });
+    }
+  }
 
   return NextResponse.json(sender);
 }

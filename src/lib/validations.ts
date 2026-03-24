@@ -46,6 +46,7 @@ export const updateSenderSchema = z.object({
   name: z.string().min(1, "Name is required.").max(200),
   gstNumber: z.string().max(50).optional().default(""),
   signature: z.string().optional(),
+  buildingIds: z.array(z.string()).optional(),
 });
 
 // ── Buildings ──

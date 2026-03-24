@@ -19,6 +19,7 @@ model Sender {
   invoices          Invoice[]
   electricityBills  ElectricityBill[]
   waterBills        WaterBill[]
+  buildings         SenderBuilding[]
 }
 
 model Building {
@@ -32,6 +33,18 @@ model Building {
   invoices          Invoice[]
   electricityBills  ElectricityBill[]
   waterBills        WaterBill[]
+  senders           SenderBuilding[]
+}
+
+model SenderBuilding {
+  id         String   @id @default(cuid())
+  senderId   String
+  sender     Sender   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  buildingId String
+  building   Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([senderId, buildingId])
 }
 
 model Tenant {
