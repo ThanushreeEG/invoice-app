@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import ConfirmModal from "@/components/ConfirmModal";
+import { inputClass, labelClass } from "@/lib/ui";
+import LoadingState from "@/components/LoadingState";
 import dynamic from "next/dynamic";
 
 const SignaturePad = dynamic(() => import("@/components/SignaturePad"), {
@@ -51,6 +54,7 @@ export default function SettingsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [allowedEmails, setAllowedEmails] = useState<AllowedEmail[]>([]);
   const [newAllowedEmail, setNewAllowedEmail] = useState("");
+  const [deleteBuildingId, setDeleteBuildingId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -180,8 +184,14 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDeleteBuilding = async (id: string) => {
-    if (!confirm("Remove this building?")) return;
+  const handleDeleteBuilding = (id: string) => {
+    setDeleteBuildingId(id);
+  };
+
+  const confirmDeleteBuilding = async () => {
+    if (!deleteBuildingId) return;
+    const id = deleteBuildingId;
+    setDeleteBuildingId(null);
     try {
       await fetch(`/api/buildings/${id}`, { method: "DELETE" });
       setBuildings(buildings.filter((b) => b.id !== id));
@@ -192,23 +202,15 @@ export default function SettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-lg text-gray-500">Loading settings...</div>
-      </div>
-    );
+    return <LoadingState message="Loading settings..." />;
   }
-
-  const inputClass =
-    "w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
-  const labelClass = "block text-sm font-semibold text-gray-700 mb-1";
 
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
 
       {/* Senders / Landlords */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
           Senders (Landlords)
         </h2>
@@ -221,8 +223,9 @@ export default function SettingsPage() {
             <div key={sender.id} className="border border-gray-200 rounded-lg p-4">
               <div className="space-y-3">
                 <div>
-                  <label className={labelClass}>Name</label>
+                  <label className={labelClass} htmlFor={`sender-name-${sender.id}`}>Name</label>
                   <input
+                    id={`sender-name-${sender.id}`}
                     type="text"
                     className={inputClass}
                     value={sender.name}
@@ -234,8 +237,9 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>GST Number</label>
+                  <label className={labelClass} htmlFor={`sender-gst-${sender.id}`}>GST Number</label>
                   <input
+                    id={`sender-gst-${sender.id}`}
                     type="text"
                     className={inputClass}
                     value={sender.gstNumber}
@@ -303,7 +307,7 @@ export default function SettingsPage() {
                           setSenders(updated);
                           await handleUpdateSender(updatedSender);
                         }}
-                        className="text-xs text-red-500 mt-1 hover:text-red-700"
+                        className="text-xs text-red-600 mt-1 hover:text-red-700"
                       >
                         Remove signature
                       </button>
@@ -334,8 +338,9 @@ export default function SettingsPage() {
             <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
               <div className="space-y-3">
                 <div>
-                  <label className={labelClass}>Name *</label>
+                  <label className={labelClass} htmlFor="newSenderName">Name *</label>
                   <input
+                    id="newSenderName"
                     type="text"
                     className={inputClass}
                     value={newSender.name}
@@ -344,8 +349,9 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>GST Number</label>
+                  <label className={labelClass} htmlFor="newSenderGst">GST Number</label>
                   <input
+                    id="newSenderGst"
                     type="text"
                     className={inputClass}
                     value={newSender.gstNumber}
@@ -380,7 +386,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Buildings / Properties */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
           Buildings / Properties
         </h2>
@@ -393,8 +399,9 @@ export default function SettingsPage() {
             <div key={building.id} className="border border-gray-200 rounded-lg p-4">
               <div className="space-y-3">
                 <div>
-                  <label className={labelClass}>Building Name</label>
+                  <label className={labelClass} htmlFor={`building-name-${building.id}`}>Building Name</label>
                   <input
+                    id={`building-name-${building.id}`}
                     type="text"
                     className={inputClass}
                     value={building.name}
@@ -407,8 +414,9 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Address</label>
+                  <label className={labelClass} htmlFor={`building-address-${building.id}`}>Address</label>
                   <textarea
+                    id={`building-address-${building.id}`}
                     className={inputClass}
                     rows={2}
                     value={building.address}
@@ -442,8 +450,9 @@ export default function SettingsPage() {
             <div className="border border-green-200 rounded-lg p-4 bg-green-50">
               <div className="space-y-3">
                 <div>
-                  <label className={labelClass}>Building Name *</label>
+                  <label className={labelClass} htmlFor="newBuildingName">Building Name *</label>
                   <input
+                    id="newBuildingName"
                     type="text"
                     className={inputClass}
                     value={newBuilding.name}
@@ -452,8 +461,9 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Address</label>
+                  <label className={labelClass} htmlFor="newBuildingAddress">Address</label>
                   <textarea
+                    id="newBuildingAddress"
                     className={inputClass}
                     rows={2}
                     value={newBuilding.address}
@@ -464,7 +474,7 @@ export default function SettingsPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleAddBuilding}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+                    className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800"
                   >
                     Add Building
                   </button>
@@ -489,15 +499,16 @@ export default function SettingsPage() {
       </div>
 
       {/* General Contact Info */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
           General Contact Info
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Phone</label>
+            <label className={labelClass} htmlFor="senderPhone">Phone</label>
             <input
+              id="senderPhone"
               type="text"
               className={inputClass}
               value={settings.senderPhone}
@@ -507,8 +518,9 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className={labelClass}>Email</label>
+            <label className={labelClass} htmlFor="senderEmail">Email</label>
             <input
+              id="senderEmail"
               type="email"
               className={inputClass}
               value={settings.senderEmail}
@@ -521,12 +533,12 @@ export default function SettingsPage() {
       </div>
 
       {/* Email Configuration */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
           Email (Gmail)
         </h2>
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+          <div className="w-3 h-3 bg-green-600 rounded-full"></div>
           <p className="text-sm text-gray-700">
             Emails are sent via your Google account. No extra configuration needed.
           </p>
@@ -543,7 +555,7 @@ export default function SettingsPage() {
 
       {/* Allowed Users (Admin only) */}
       {isAdmin && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6" style={{ border: "1px solid var(--border)" }}>
           <h2 className="text-lg font-semibold text-gray-800 mb-2">
             Allowed Users
           </h2>
@@ -569,7 +581,7 @@ export default function SettingsPage() {
                       toast.error("Failed to remove.");
                     }
                   }}
-                  className="text-red-500 hover:text-red-700 text-sm font-medium"
+                  className="text-red-600 hover:text-red-700 text-sm font-medium"
                 >
                   Remove
                 </button>
@@ -578,6 +590,7 @@ export default function SettingsPage() {
 
             <div className="flex gap-2">
               <input
+                id="newAllowedEmail"
                 type="email"
                 className={inputClass}
                 value={newAllowedEmail}
@@ -621,6 +634,16 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={deleteBuildingId !== null}
+        onClose={() => setDeleteBuildingId(null)}
+        onConfirm={confirmDeleteBuilding}
+        title="Remove Building"
+        message="Are you sure you want to remove this building? Tenants assigned to it will be unlinked."
+        confirmLabel="Remove"
+        variant="danger"
+      />
 
       {/* Save Button */}
       <button

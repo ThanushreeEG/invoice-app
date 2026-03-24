@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { MONTHS, MONTH_SHORT } from "@/lib/constants";
+import StatusBadge from "@/components/StatusBadge";
 import {
   Users,
   FileText,
@@ -14,17 +16,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-
-const MONTHS = [
-  "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
-  "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
-];
-
-const MONTH_SHORT: Record<string, string> = {
-  JANUARY: "Jan", FEBRUARY: "Feb", MARCH: "Mar", APRIL: "Apr",
-  MAY: "May", JUNE: "Jun", JULY: "Jul", AUGUST: "Aug",
-  SEPTEMBER: "Sep", OCTOBER: "Oct", NOVEMBER: "Nov", DECEMBER: "Dec",
-};
 
 interface DashboardData {
   totalTenants: number;
@@ -117,19 +108,6 @@ export default function DashboardPage() {
     }
   };
 
-  const statusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      DRAFT: "bg-yellow-100 text-yellow-700 border border-yellow-200",
-      SENT: "bg-green-100 text-green-700 border border-green-200",
-      FAILED: "bg-red-100 text-red-700 border border-red-200",
-    };
-    return (
-      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${styles[status] || "bg-gray-100"}`}>
-        {status}
-      </span>
-    );
-  };
-
   const grandTotal = data ? data.totalInvoiced + data.totalEb + data.totalWater : 0;
 
   return (
@@ -137,7 +115,7 @@ export default function DashboardPage() {
       {/* Header with month picker */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-        <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm border border-gray-200 px-2 py-1.5">
+        <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm px-2 py-1.5" style={{ border: "1px solid var(--border)" }}>
           <button
             onClick={goToPrevMonth}
             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
@@ -150,6 +128,7 @@ export default function DashboardPage() {
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
+              aria-label="Select month"
               className="text-sm font-semibold text-gray-800 bg-transparent border-none focus:outline-none cursor-pointer"
             >
               {MONTHS.map((m) => (
@@ -159,6 +138,7 @@ export default function DashboardPage() {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              aria-label="Select year"
               className="text-sm font-semibold text-gray-800 bg-transparent border-none focus:outline-none cursor-pointer"
             >
               {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map((y) => (
@@ -177,21 +157,21 @@ export default function DashboardPage() {
       </div>
 
       {loading || !data ? (
-        <div className="flex items-center justify-center py-20">
+        <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
           <div className="text-gray-400 text-lg">Loading...</div>
         </div>
       ) : (
-        <>
+        <div className="fade-in">
           {/* Grand Total Banner */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-lg p-6 mb-6 text-white">
-            <div className="flex items-center gap-3 mb-2">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-lg p-6 sm:p-8 mb-6 text-white fade-in">
+            <div className="flex items-center gap-3 mb-3">
               <TrendingUp className="w-5 h-5 opacity-80" />
-              <span className="text-sm font-medium opacity-80">
+              <span className="text-sm font-medium opacity-80 uppercase tracking-wide">
                 Total Billed &mdash; {MONTH_SHORT[selectedMonth]} {selectedYear}
               </span>
             </div>
-            <div className="text-4xl font-bold">{formatCurrency(grandTotal)}</div>
-            <div className="flex flex-wrap gap-x-6 gap-y-1 mt-3 text-sm opacity-80">
+            <div className="text-4xl sm:text-5xl font-extrabold tracking-tight">{formatCurrency(grandTotal)}</div>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 mt-4 text-sm opacity-80">
               <span>Rent: {formatCurrency(data.totalInvoiced)}</span>
               <span>EB: {formatCurrency(data.totalEb)}</span>
               <span>Water: {formatCurrency(data.totalWater)}</span>
@@ -200,7 +180,7 @@ export default function DashboardPage() {
 
           {/* GST Breakdown */}
           {data.invoiceCount > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+            <div className="bg-white rounded-xl shadow-sm p-5 mb-6" style={{ border: "1px solid var(--border)" }}>
               <h3 className="text-sm font-semibold text-gray-500 mb-3">
                 Invoice Breakdown &mdash; {MONTH_SHORT[selectedMonth]} {selectedYear}
               </h3>
@@ -211,15 +191,15 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <div className="text-xs text-gray-400">CGST (9%)</div>
-                  <div className="text-lg font-bold text-amber-600">{formatCurrency(data.totalCgst)}</div>
+                  <div className="text-lg font-bold text-blue-600">{formatCurrency(data.totalCgst)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400">SGST (9%)</div>
-                  <div className="text-lg font-bold text-amber-600">{formatCurrency(data.totalSgst)}</div>
+                  <div className="text-lg font-bold text-blue-600">{formatCurrency(data.totalSgst)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400">Total GST Collected</div>
-                  <div className="text-lg font-bold text-red-600">{formatCurrency(data.totalCgst + data.totalSgst)}</div>
+                  <div className="text-lg font-bold text-red-700">{formatCurrency(data.totalCgst + data.totalSgst)}</div>
                 </div>
               </div>
             </div>
@@ -227,7 +207,7 @@ export default function DashboardPage() {
 
           {/* Landlord Summary */}
           {data.senderSummaries && data.senderSummaries.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+            <div className="bg-white rounded-xl shadow-sm p-5 mb-6" style={{ border: "1px solid var(--border)" }}>
               <h3 className="text-sm font-semibold text-gray-500 mb-3">
                 Landlord Summary &mdash; {MONTH_SHORT[selectedMonth]} {selectedYear}
               </h3>
@@ -239,7 +219,7 @@ export default function DashboardPage() {
                       className="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors text-left"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
                           {sender.name.charAt(0)}
                         </div>
                         <div>
@@ -253,7 +233,7 @@ export default function DashboardPage() {
                       </div>
                     </button>
                     {expandedSender === sender.id && (
-                      <div className="ml-11 mr-4 mb-2 p-3 bg-gray-50 rounded-lg">
+                      <div className="ml-11 mr-4 mb-2 p-3 rounded-lg" style={{ background: "var(--surface-secondary)" }}>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                           <div>
                             <div className="text-xs text-gray-400">Base Rent</div>
@@ -261,15 +241,15 @@ export default function DashboardPage() {
                           </div>
                           <div>
                             <div className="text-xs text-gray-400">CGST</div>
-                            <div className="font-semibold text-amber-600">{formatCurrency(sender.cgst)}</div>
+                            <div className="font-semibold text-blue-600">{formatCurrency(sender.cgst)}</div>
                           </div>
                           <div>
                             <div className="text-xs text-gray-400">SGST</div>
-                            <div className="font-semibold text-amber-600">{formatCurrency(sender.sgst)}</div>
+                            <div className="font-semibold text-blue-600">{formatCurrency(sender.sgst)}</div>
                           </div>
                           <div>
                             <div className="text-xs text-gray-400">Total GST</div>
-                            <div className="font-semibold text-red-600">{formatCurrency(sender.cgst + sender.sgst)}</div>
+                            <div className="font-semibold text-red-700">{formatCurrency(sender.cgst + sender.sgst)}</div>
                           </div>
                         </div>
                       </div>
@@ -282,47 +262,47 @@ export default function DashboardPage() {
 
           {/* Stat Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div className="bg-white rounded-xl shadow-sm p-5 card-hover" style={{ border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="bg-blue-100 p-2 rounded-lg">
+                <div className="bg-blue-100 p-2.5 rounded-lg">
                   <Users className="w-5 h-5 text-blue-600" />
                 </div>
-                <span className="text-sm text-gray-500">Tenants</span>
+                <span className="text-sm text-gray-500 font-medium">Tenants</span>
               </div>
-              <div className="text-3xl font-bold text-gray-800">{data.totalTenants}</div>
+              <div className="text-3xl font-extrabold text-gray-900 tracking-tight">{data.totalTenants}</div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div className="bg-white rounded-xl shadow-sm p-5 card-hover" style={{ border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="bg-green-100 p-2 rounded-lg">
-                  <FileText className="w-5 h-5 text-green-600" />
+                <div className="bg-green-100 p-2.5 rounded-lg">
+                  <FileText className="w-5 h-5 text-green-700" />
                 </div>
-                <span className="text-sm text-gray-500">Invoices</span>
+                <span className="text-sm text-gray-500 font-medium">Invoices</span>
               </div>
-              <div className="text-3xl font-bold text-gray-800">{data.invoiceCount}</div>
-              <div className="text-sm text-green-600 font-medium mt-1">{formatCurrency(data.totalInvoiced)}</div>
+              <div className="text-3xl font-extrabold text-gray-900 tracking-tight">{data.invoiceCount}</div>
+              <div className="text-sm text-green-700 font-semibold mt-1">{formatCurrency(data.totalInvoiced)}</div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div className="bg-white rounded-xl shadow-sm p-5 card-hover" style={{ border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="bg-orange-100 p-2 rounded-lg">
-                  <Zap className="w-5 h-5 text-orange-600" />
+                <div className="bg-orange-100 p-2.5 rounded-lg">
+                  <Zap className="w-5 h-5 text-orange-700" />
                 </div>
-                <span className="text-sm text-gray-500">EB Bills</span>
+                <span className="text-sm text-gray-500 font-medium">EB Bills</span>
               </div>
-              <div className="text-3xl font-bold text-gray-800">{data.ebCount}</div>
-              <div className="text-sm text-orange-600 font-medium mt-1">{formatCurrency(data.totalEb)}</div>
+              <div className="text-3xl font-extrabold text-gray-900 tracking-tight">{data.ebCount}</div>
+              <div className="text-sm text-orange-700 font-semibold mt-1">{formatCurrency(data.totalEb)}</div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div className="bg-white rounded-xl shadow-sm p-5 card-hover" style={{ border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="bg-teal-100 p-2 rounded-lg">
-                  <Droplets className="w-5 h-5 text-teal-600" />
+                <div className="bg-cyan-100 p-2.5 rounded-lg">
+                  <Droplets className="w-5 h-5 text-cyan-700" />
                 </div>
-                <span className="text-sm text-gray-500">Water Bills</span>
+                <span className="text-sm text-gray-500 font-medium">Water Bills</span>
               </div>
-              <div className="text-3xl font-bold text-gray-800">{data.waterCount}</div>
-              <div className="text-sm text-teal-600 font-medium mt-1">{formatCurrency(data.totalWater)}</div>
+              <div className="text-3xl font-extrabold text-gray-900 tracking-tight">{data.waterCount}</div>
+              <div className="text-sm text-cyan-700 font-semibold mt-1">{formatCurrency(data.totalWater)}</div>
             </div>
           </div>
 
@@ -330,11 +310,11 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <Link
               href="/invoices/new"
-              className="group bg-white rounded-xl border border-gray-200 p-5 hover:border-green-300 hover:shadow-md transition-all"
+              className="group bg-white rounded-xl p-5 card-hover" style={{ border: "1px solid var(--border)" }}
             >
               <div className="flex items-center gap-3">
                 <div className="bg-green-100 p-2.5 rounded-xl group-hover:bg-green-200 transition-colors">
-                  <PlusCircle className="w-5 h-5 text-green-600" />
+                  <PlusCircle className="w-5 h-5 text-green-700" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-800">New Invoice</div>
@@ -344,11 +324,11 @@ export default function DashboardPage() {
             </Link>
             <Link
               href="/electricity/new"
-              className="group bg-white rounded-xl border border-gray-200 p-5 hover:border-orange-300 hover:shadow-md transition-all"
+              className="group bg-white rounded-xl p-5 card-hover" style={{ border: "1px solid var(--border)" }}
             >
               <div className="flex items-center gap-3">
                 <div className="bg-orange-100 p-2.5 rounded-xl group-hover:bg-orange-200 transition-colors">
-                  <Zap className="w-5 h-5 text-orange-600" />
+                  <Zap className="w-5 h-5 text-orange-700" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-800">EB Bill</div>
@@ -358,11 +338,11 @@ export default function DashboardPage() {
             </Link>
             <Link
               href="/water/new"
-              className="group bg-white rounded-xl border border-gray-200 p-5 hover:border-teal-300 hover:shadow-md transition-all"
+              className="group bg-white rounded-xl p-5 card-hover" style={{ border: "1px solid var(--border)" }}
             >
               <div className="flex items-center gap-3">
-                <div className="bg-teal-100 p-2.5 rounded-xl group-hover:bg-teal-200 transition-colors">
-                  <Droplets className="w-5 h-5 text-teal-600" />
+                <div className="bg-cyan-100 p-2.5 rounded-xl group-hover:bg-cyan-200 transition-colors">
+                  <Droplets className="w-5 h-5 text-cyan-700" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-800">Water Bill</div>
@@ -372,7 +352,7 @@ export default function DashboardPage() {
             </Link>
             <Link
               href="/tenants"
-              className="group bg-white rounded-xl border border-gray-200 p-5 hover:border-blue-300 hover:shadow-md transition-all"
+              className="group bg-white rounded-xl p-5 card-hover" style={{ border: "1px solid var(--border)" }}
             >
               <div className="flex items-center gap-3">
                 <div className="bg-blue-100 p-2.5 rounded-xl group-hover:bg-blue-200 transition-colors">
@@ -390,15 +370,18 @@ export default function DashboardPage() {
           {data.recentInvoices.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-gray-800">Invoices</h2>
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <span className="w-1 h-5 bg-green-500 rounded-full" />
+                  Invoices
+                </h2>
                 <Link href="/invoices" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
                   View All
                 </Link>
               </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-gray-50 text-sm text-gray-600">
+                    <tr className="text-sm text-gray-600" style={{ background: "var(--surface-secondary)" }}>
                       <th className="text-left px-4 py-3 font-semibold" scope="col">Invoice #</th>
                       <th className="text-left px-4 py-3 font-semibold" scope="col">Tenant</th>
                       <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell" scope="col">Period</th>
@@ -408,12 +391,12 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {data.recentInvoices.map((inv) => (
-                      <tr key={inv.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
+                      <tr key={inv.id} className="border-t hover:bg-gray-50 transition-colors" style={{ borderColor: "var(--border-light)" }}>
                         <td className="px-4 py-3 text-sm font-medium">{inv.invoiceNumber}</td>
                         <td className="px-4 py-3 text-sm">{inv.tenant.name}</td>
                         <td className="px-4 py-3 text-sm text-gray-500 hidden sm:table-cell">{inv.month} {inv.year}</td>
                         <td className="px-4 py-3 text-sm text-right font-medium">{formatCurrency(inv.totalAmount)}</td>
-                        <td className="px-4 py-3 text-center">{statusBadge(inv.status)}</td>
+                        <td className="px-4 py-3 text-center"><StatusBadge status={inv.status} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -426,15 +409,18 @@ export default function DashboardPage() {
           {data.recentBills.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-gray-800">Electricity Bills</h2>
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <span className="w-1 h-5 bg-orange-500 rounded-full" />
+                  Electricity Bills
+                </h2>
                 <Link href="/electricity" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
                   View All
                 </Link>
               </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-gray-50 text-sm text-gray-600">
+                    <tr className="text-sm text-gray-600" style={{ background: "var(--surface-secondary)" }}>
                       <th className="text-left px-4 py-3 font-semibold" scope="col">Tenant</th>
                       <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell" scope="col">Period</th>
                       <th className="text-right px-4 py-3 font-semibold" scope="col">Net Payable</th>
@@ -443,11 +429,11 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {data.recentBills.map((bill) => (
-                      <tr key={bill.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
+                      <tr key={bill.id} className="border-t hover:bg-gray-50 transition-colors" style={{ borderColor: "var(--border-light)" }}>
                         <td className="px-4 py-3 text-sm font-medium">{bill.tenant.name}</td>
                         <td className="px-4 py-3 text-sm text-gray-500 hidden sm:table-cell">{bill.month} {bill.year}</td>
                         <td className="px-4 py-3 text-sm text-right font-medium">{formatCurrency(bill.netPayable)}</td>
-                        <td className="px-4 py-3 text-center">{statusBadge(bill.status)}</td>
+                        <td className="px-4 py-3 text-center"><StatusBadge status={bill.status} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -460,15 +446,18 @@ export default function DashboardPage() {
           {data.recentWaterBills.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-gray-800">Water Bills</h2>
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <span className="w-1 h-5 bg-cyan-500 rounded-full" />
+                  Water Bills
+                </h2>
                 <Link href="/water" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
                   View All
                 </Link>
               </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-gray-50 text-sm text-gray-600">
+                    <tr className="text-sm text-gray-600" style={{ background: "var(--surface-secondary)" }}>
                       <th className="text-left px-4 py-3 font-semibold" scope="col">Tenant</th>
                       <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell" scope="col">Period</th>
                       <th className="text-right px-4 py-3 font-semibold" scope="col">Net Payable</th>
@@ -477,11 +466,11 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {data.recentWaterBills.map((bill) => (
-                      <tr key={bill.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
+                      <tr key={bill.id} className="border-t hover:bg-gray-50 transition-colors" style={{ borderColor: "var(--border-light)" }}>
                         <td className="px-4 py-3 text-sm font-medium">{bill.tenant.name}</td>
                         <td className="px-4 py-3 text-sm text-gray-500 hidden sm:table-cell">{bill.month} {bill.year}</td>
                         <td className="px-4 py-3 text-sm text-right font-medium">{formatCurrency(bill.netPayable)}</td>
-                        <td className="px-4 py-3 text-center">{statusBadge(bill.status)}</td>
+                        <td className="px-4 py-3 text-center"><StatusBadge status={bill.status} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -498,7 +487,7 @@ export default function DashboardPage() {
               <p className="text-sm mt-1">Try selecting a different month</p>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

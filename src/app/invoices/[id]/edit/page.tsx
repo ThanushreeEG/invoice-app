@@ -122,7 +122,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
         <div className="text-lg text-gray-500">Loading invoice...</div>
       </div>
     );

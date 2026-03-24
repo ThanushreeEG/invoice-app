@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { MONTHS } from "@/lib/constants";
 import SendConfirmModal from "@/components/SendConfirmModal";
 
 interface Sender {
@@ -31,11 +32,6 @@ interface TenantBill {
   waterCharges: number;
   invoiceNo: string;
 }
-
-const MONTHS = [
-  "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
-  "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
-];
 
 export default function NewWaterBillPage() {
   const router = useRouter();
@@ -246,14 +242,6 @@ export default function NewWaterBillPage() {
     setSending(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-lg text-gray-500">Loading...</div>
-      </div>
-    );
-  }
-
   const selectedSender = senders.find((s) => s.id === selectedSenderId);
   const senderBuildings = selectedSender?.buildingIds?.length
     ? buildings.filter((b) => selectedSender.buildingIds.includes(b.id))
@@ -268,6 +256,14 @@ export default function NewWaterBillPage() {
     }
   }, [selectedSenderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
+        <div className="text-lg text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">
@@ -275,7 +271,7 @@ export default function NewWaterBillPage() {
       </h1>
 
       {/* Sender Selection */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-4" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">
           Sender (Landlord)
         </h2>
@@ -297,7 +293,7 @@ export default function NewWaterBillPage() {
       </div>
 
       {/* Building Selection */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-4" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">
           Building / Property
         </h2>
@@ -324,7 +320,7 @@ export default function NewWaterBillPage() {
       </div>
 
       {/* Month/Year Selector */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-6" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">
           Bill Period
         </h2>
@@ -332,7 +328,7 @@ export default function NewWaterBillPage() {
           <select
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="flex-1 px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="flex-1 px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {MONTHS.map((m) => (
               <option key={m} value={m}>
@@ -344,7 +340,7 @@ export default function NewWaterBillPage() {
             type="number"
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}
-            className="w-28 px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-28 px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -352,14 +348,14 @@ export default function NewWaterBillPage() {
       {/* Step 1: Select Tenants */}
       {step === "select" && (
         <>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+          <div className="bg-white rounded-xl shadow-sm p-5 mb-6" style={{ border: "1px solid var(--border)" }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-gray-700">
                 Select Tenants ({selected.length} selected)
               </h2>
               <button
                 onClick={selectAll}
-                className="text-sm text-teal-600 hover:text-teal-800 font-medium"
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
                 {selected.length === tenants.length ? "Deselect All" : "Select All"}
               </button>
@@ -379,7 +375,7 @@ export default function NewWaterBillPage() {
                       onClick={() => toggleTenant(tenant)}
                       className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
                         isSelected
-                          ? "border-teal-500 bg-teal-50"
+                          ? "border-blue-500 bg-blue-50"
                           : "border-gray-200 hover:border-gray-300"
                       }`}
                     >
@@ -387,7 +383,7 @@ export default function NewWaterBillPage() {
                         <div
                           className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
                             isSelected
-                              ? "bg-teal-600 border-teal-600"
+                              ? "bg-blue-600 border-blue-600"
                               : "border-gray-300"
                           }`}
                         >
@@ -414,7 +410,7 @@ export default function NewWaterBillPage() {
           <button
             onClick={() => setStep("details")}
             disabled={selected.length === 0 || !selectedSenderId || !selectedBuildingId}
-            className="w-full py-4 bg-teal-600 text-white text-lg font-semibold rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-blue-600 text-white text-lg font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next: Enter Water Charges
           </button>
@@ -428,7 +424,7 @@ export default function NewWaterBillPage() {
             {selected.map((item) => (
               <div
                 key={item.tenantId}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-5"
+                className="bg-white rounded-xl shadow-sm p-5" style={{ border: "1px solid var(--border)" }}
               >
                 <h3 className="font-semibold text-gray-800 mb-1">
                   {item.tenant.name}
@@ -447,7 +443,7 @@ export default function NewWaterBillPage() {
                       step="0.01"
                       value={item.waterCharges || ""}
                       onChange={(e) => updateField(item.tenantId, "waterCharges", parseFloat(e.target.value) || 0)}
-                      className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter water charge amount"
                     />
                   </div>
@@ -459,19 +455,19 @@ export default function NewWaterBillPage() {
                       type="text"
                       value={item.invoiceNo}
                       onChange={(e) => updateField(item.tenantId, "invoiceNo", e.target.value)}
-                      className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Optional"
                     />
                   </div>
                 </div>
 
                 {item.waterCharges > 0 && (
-                  <div className="bg-teal-50 rounded-lg p-4">
+                  <div className="bg-blue-50 rounded-lg p-4">
                     <div className="flex justify-between text-sm text-gray-600 mb-1">
                       <span>Water Charges</span>
                       <span>{formatCurrency(item.waterCharges)}</span>
                     </div>
-                    <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-teal-200 mt-2">
+                    <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-blue-200 mt-2">
                       <span>Net Payable</span>
                       <span>{formatCurrency(item.waterCharges)}</span>
                     </div>
@@ -491,7 +487,7 @@ export default function NewWaterBillPage() {
             <button
               onClick={() => setStep("preview")}
               disabled={selected.some((s) => s.waterCharges <= 0)}
-              className="flex-1 py-4 bg-teal-600 text-white text-lg font-semibold rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-50"
+              className="flex-1 py-4 bg-blue-600 text-white text-lg font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
               Preview Bills
             </button>
@@ -506,7 +502,7 @@ export default function NewWaterBillPage() {
             {selected.map((item) => (
               <div
                 key={item.tenantId}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                className="bg-white rounded-xl shadow-sm p-6" style={{ border: "1px solid var(--border)" }}
               >
                 {/* Bill Header */}
                 <div className="text-center mb-4 pb-3 border-b border-gray-300">
@@ -557,8 +553,8 @@ export default function NewWaterBillPage() {
           </div>
 
           {sending && (
-            <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-4 text-center">
-              <div className="text-teal-700 font-medium">{sendProgress}</div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-center">
+              <div className="text-gray-800 font-medium">{sendProgress}</div>
             </div>
           )}
 

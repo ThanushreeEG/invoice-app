@@ -54,7 +54,7 @@ export default function Navbar() {
   if (pathname === "/login") return null;
 
   return (
-    <nav className="bg-white border-b border-gray-200 shadow-sm" aria-label="Main navigation">
+    <nav className="bg-white border-b shadow-sm" style={{ borderColor: "var(--border)" }} aria-label="Main navigation">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="text-xl font-bold text-blue-700" aria-label="SV Towers Finance Manager - Home">
@@ -130,7 +130,7 @@ export default function Navbar() {
                   role="menuitem"
                   aria-current={isCurrent ? "page" : undefined}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     isCurrent
                       ? "bg-blue-100 text-blue-700"
                       : "text-gray-600 hover:bg-gray-100"
@@ -142,7 +142,7 @@ export default function Navbar() {
               );
             })}
             {user && (
-              <div className="flex items-center gap-2 px-3 py-2 border-t border-gray-100 mt-2 pt-3">
+              <div className="flex items-center gap-2 px-3 py-2.5 border-t mt-2 pt-3" style={{ borderColor: "var(--border-light)" }}>
                 {user.avatar ? (
                   <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
                 ) : (

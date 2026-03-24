@@ -2,6 +2,8 @@
 
 import { calculateGST } from "@/lib/gst";
 import { formatCurrency, formatInvoiceAmount } from "@/lib/formatCurrency";
+import { MONTHS } from "@/lib/constants";
+import { inputClass, labelClass } from "@/lib/ui";
 
 interface Sender {
   id: string;
@@ -14,11 +16,6 @@ interface Building {
   name: string;
   address: string;
 }
-
-const MONTHS = [
-  "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
-  "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
-];
 
 interface InvoiceFormProps {
   senders: Sender[];
@@ -38,10 +35,6 @@ interface InvoiceFormProps {
   onBaseRentChange: (value: number) => void;
   onDescriptionChange: (value: string) => void;
 }
-
-const inputClass =
-  "w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500";
-const labelClass = "block text-sm font-semibold text-gray-700 mb-1";
 
 export default function InvoiceForm({
   senders,
@@ -167,7 +160,7 @@ export default function InvoiceForm({
 
       {/* GST Breakdown */}
       {baseRent > 0 && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-4" aria-label="GST breakdown">
+        <div className="rounded-lg p-4 mb-4" style={{ background: "var(--surface-secondary)" }} aria-label="GST breakdown">
           <div className="flex justify-between text-sm text-gray-600 mb-1">
             <span>Base Rent</span>
             <span>{formatInvoiceAmount(baseRent)}</span>

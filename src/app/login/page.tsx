@@ -9,7 +9,7 @@ function LoginContent() {
   const error = searchParams.get("error");
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
+    <main className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
       {/* Cartoon city background */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -21,32 +21,32 @@ function LoginContent() {
       <div className="absolute inset-0 bg-black/40" />
 
       {/* Card */}
-      <div className="relative max-w-md w-full bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 text-center">
-        <div className="flex justify-center mb-4">
+      <div className="relative max-w-md w-full bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 sm:p-10 text-center fade-in">
+        <div className="flex justify-center mb-5">
           <div className="bg-blue-100 p-4 rounded-full shadow-md">
             <Building2 className="w-10 h-10 text-blue-700" />
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">
-          SV Towers Finance Manager
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">
+          SV Towers
         </h1>
-        <p className="text-gray-500 mb-8">
-          Sign in to manage invoices and bills
+        <p className="text-gray-500 mb-8 text-sm">
+          Finance Manager &mdash; Sign in to continue
         </p>
 
         {error === "not_authorized" ? (
-          <div className="bg-red-50 text-red-700 rounded-lg p-3 mb-6 text-sm">
+          <div role="alert" className="bg-red-50 text-red-700 rounded-lg p-3 mb-6 text-sm">
             Access denied. Your account is not authorized to use this app. Contact the administrator.
           </div>
         ) : error ? (
-          <div className="bg-red-50 text-red-700 rounded-lg p-3 mb-6 text-sm">
+          <div role="alert" className="bg-red-50 text-red-700 rounded-lg p-3 mb-6 text-sm">
             Sign in failed. Please try again.
           </div>
         ) : null}
 
         <a
           href="/api/auth/google"
-          className="inline-flex items-center justify-center gap-3 w-full bg-white border border-gray-300 rounded-xl px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:shadow-lg transition-all"
+          className="inline-flex items-center justify-center gap-3 w-full bg-white border border-gray-300 rounded-xl px-6 py-3.5 text-base font-semibold text-gray-700 hover:bg-gray-50 hover:shadow-lg transition-all"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -73,7 +73,7 @@ function LoginContent() {
           Secure login powered by Google OAuth
         </p>
       </div>
-    </div>
+    </main>
   );
 }
 

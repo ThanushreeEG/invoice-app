@@ -6,6 +6,9 @@ import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/formatCurrency";
 import Link from "next/link";
 import SendConfirmModal from "@/components/SendConfirmModal";
+import ConfirmModal from "@/components/ConfirmModal";
+import StatusBadge from "@/components/StatusBadge";
+import { STATUS_OPTIONS, MONTHS as MONTH_NAMES, MONTH_SHORT, formatDate } from "@/lib/constants";
 
 interface Invoice {
   id: string;
@@ -57,30 +60,6 @@ interface Pagination {
   totalPages: number;
 }
 
-const STATUS_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "DRAFT", label: "Draft" },
-  { value: "SENT", label: "Sent" },
-  { value: "FAILED", label: "Failed" },
-];
-
-function statusBadge(status: string) {
-  const styles: Record<string, string> = {
-    DRAFT: "bg-yellow-100 text-yellow-700",
-    SENT: "bg-green-100 text-green-700",
-    FAILED: "bg-red-100 text-red-700",
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${styles[status] || "bg-gray-100 text-gray-700"}`}>
-      {status}
-    </span>
-  );
-}
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} at ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
-}
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -114,6 +93,9 @@ export default function HistoryPage() {
   const [wbStatus, setWbStatus] = useState("");
   const [wbLoading, setWbLoading] = useState(true);
   const [wbSendingId, setWbSendingId] = useState<string | null>(null);
+
+  // Delete confirm state
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "invoice" | "eb" | "water"; id: string } | null>(null);
 
   // Send modal state
   const [sendModal, setSendModal] = useState<{
@@ -201,13 +183,8 @@ export default function HistoryPage() {
     setSendModal(null);
   };
 
-  const handleInvDelete = async (id: string) => {
-    if (!confirm("Delete this draft invoice?")) return;
-    try {
-      const res = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (res.ok) { toast.success("Invoice deleted!"); fetchInvoices(); } else { toast.error(data.error || "Failed to delete."); }
-    } catch { toast.error("Failed to delete invoice."); }
+  const handleInvDelete = (id: string) => {
+    setDeleteTarget({ type: "invoice", id });
   };
 
   // EB handlers
@@ -237,13 +214,8 @@ export default function HistoryPage() {
     setSendModal(null);
   };
 
-  const handleEbDelete = async (id: string) => {
-    if (!confirm("Delete this draft electricity bill?")) return;
-    try {
-      const res = await fetch(`/api/electricity/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (res.ok) { toast.success("Bill deleted!"); fetchBills(); } else { toast.error(data.error || "Failed to delete."); }
-    } catch { toast.error("Failed to delete bill."); }
+  const handleEbDelete = (id: string) => {
+    setDeleteTarget({ type: "eb", id });
   };
 
   // Water Bill handlers
@@ -273,13 +245,29 @@ export default function HistoryPage() {
     setSendModal(null);
   };
 
-  const handleWbDelete = async (id: string) => {
-    if (!confirm("Delete this draft water bill?")) return;
+  const handleWbDelete = (id: string) => {
+    setDeleteTarget({ type: "water", id });
+  };
+
+  const confirmHistoryDelete = async () => {
+    if (!deleteTarget) return;
+    const { type, id } = deleteTarget;
+    setDeleteTarget(null);
     try {
-      const res = await fetch(`/api/water/${id}`, { method: "DELETE" });
+      const endpoint = type === "invoice" ? "invoices" : type === "eb" ? "electricity" : "water";
+      const res = await fetch(`/api/${endpoint}/${id}`, { method: "DELETE" });
       const data = await res.json();
-      if (res.ok) { toast.success("Water bill deleted!"); fetchWaterBills(); } else { toast.error(data.error || "Failed to delete."); }
-    } catch { toast.error("Failed to delete water bill."); }
+      if (res.ok) {
+        toast.success("Deleted!");
+        if (type === "invoice") fetchInvoices();
+        else if (type === "eb") fetchBills();
+        else fetchWaterBills();
+      } else {
+        toast.error(data.error || "Failed to delete.");
+      }
+    } catch {
+      toast.error("Failed to delete.");
+    }
   };
 
   // Download helpers
@@ -301,31 +289,29 @@ export default function HistoryPage() {
           {(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage <= 1} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50">Prev</button>
-          <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage >= pagination.totalPages} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50">Next</button>
+          <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage <= 1} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 disabled:opacity-50">Prev</button>
+          <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage >= pagination.totalPages} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 disabled:opacity-50">Next</button>
         </div>
       </div>
     ) : null;
 
   // Shared filter bar
   const FilterBar = ({ search, onSearch, status, onStatus, placeholder }: { search: string; onSearch: (v: string) => void; status: string; onStatus: (v: string) => void; placeholder: string }) => (
-    <div className="flex flex-col sm:flex-row gap-2 mb-3">
+    <div className="flex flex-col sm:flex-row gap-3 mb-3">
       <input
         type="text" value={search} onChange={(e) => onSearch(e.target.value)} placeholder={placeholder}
-        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        aria-label={placeholder}
+        className="flex-1 px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
-      <div className="flex gap-1">
+      <div className="flex gap-2">
         {STATUS_OPTIONS.map((opt) => (
           <button key={opt.value} onClick={() => onStatus(opt.value)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${status === opt.value ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${status === opt.value ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
           >{opt.label}</button>
         ))}
       </div>
     </div>
   );
-
-  const MONTH_NAMES = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
-  const MONTH_SHORT: Record<string, string> = { JANUARY:"Jan",FEBRUARY:"Feb",MARCH:"Mar",APRIL:"Apr",MAY:"May",JUNE:"Jun",JULY:"Jul",AUGUST:"Aug",SEPTEMBER:"Sep",OCTOBER:"Oct",NOVEMBER:"Nov",DECEMBER:"Dec" };
 
   const goToPrevMonth = () => {
     const idx = MONTH_NAMES.indexOf(periodMonth);
@@ -342,16 +328,18 @@ export default function HistoryPage() {
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Bill History</h1>
-        <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm border border-gray-200 px-2 py-1.5">
+        <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm px-2 py-1.5" style={{ border: "1px solid var(--border)" }}>
           <button onClick={goToPrevMonth} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Previous month">
             &larr;
           </button>
           <div className="flex items-center gap-2 px-3">
             <select value={periodMonth} onChange={(e) => setPeriodMonth(e.target.value)}
+              aria-label="Select month"
               className="text-sm font-semibold text-gray-800 bg-transparent border-none focus:outline-none cursor-pointer">
               {MONTH_NAMES.map((m) => <option key={m} value={m}>{MONTH_SHORT[m]}</option>)}
             </select>
             <select value={periodYear} onChange={(e) => setPeriodYear(parseInt(e.target.value))}
+              aria-label="Select year"
               className="text-sm font-semibold text-gray-800 bg-transparent border-none focus:outline-none cursor-pointer">
               {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
@@ -368,23 +356,23 @@ export default function HistoryPage() {
       <section className="mb-10">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-700">Rent Invoices</h2>
-          <Link href="/invoices/new" className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">+ New Invoice</Link>
+          <Link href="/invoices/new" className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800 transition-colors">+ New Invoice</Link>
         </div>
 
         <FilterBar search={invSearch} onSearch={handleInvSearch} status={invStatus} onStatus={handleInvStatus} placeholder="Search by invoice # or tenant..." />
 
         {invLoading ? (
-          <div className="text-gray-500 text-sm py-6 text-center">Loading invoices...</div>
+          <div className="text-gray-500 text-sm py-6 text-center" role="status" aria-live="polite">Loading invoices...</div>
         ) : invoices.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-500 text-sm">
+          <div className="bg-white rounded-xl p-6 text-center text-gray-500 text-sm" style={{ border: "1px solid var(--border)" }}>
             {invSearch || invStatus ? "No invoices match your filters." : "No invoices yet."}
           </div>
         ) : (
           <>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-white rounded-xl overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
+              <table className="w-full text-sm min-w-[600px]">
                 <thead>
-                  <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
+                  <tr className="text-gray-600 text-xs uppercase" style={{ background: "var(--surface-secondary)" }}>
                     <th className="text-left px-4 py-3 font-semibold">Invoice #</th>
                     <th className="text-left px-4 py-3 font-semibold">Tenant</th>
                     <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Landlord</th>
@@ -396,27 +384,27 @@ export default function HistoryPage() {
                 </thead>
                 <tbody>
                   {invoices.map((inv) => (
-                    <tr key={inv.id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <tr key={inv.id} className="border-t hover:bg-gray-50" style={{ borderColor: "var(--border-light)" }}>
                       <td className="px-4 py-3 font-medium">{inv.invoiceNumber}</td>
                       <td className="px-4 py-3">
                         <div>{inv.tenant.name}</div>
-                        {inv.status === "SENT" && inv.sentAt && <div className="text-xs text-green-600">Sent {formatDate(inv.sentAt)}</div>}
+                        {inv.status === "SENT" && inv.sentAt && <div className="text-xs text-green-700">Sent {formatDate(inv.sentAt)}</div>}
                       </td>
                       <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{inv.sender.name}</td>
                       <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{inv.month} {inv.year}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatCurrency(inv.totalAmount)}</td>
-                      <td className="px-4 py-3 text-center">{statusBadge(inv.status)}</td>
+                      <td className="px-4 py-3 text-center"><StatusBadge status={inv.status} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => downloadInvPDF(inv.id, inv.invoiceNumber)} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200">PDF</button>
+                          <button onClick={() => downloadInvPDF(inv.id, inv.invoiceNumber)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">PDF</button>
                           <button onClick={() => openInvSendModal(inv)} disabled={invSendingId === inv.id || (!inv.tenant.email && !inv.tenant.ccEmails)}
-                            className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 disabled:opacity-50">
+                            className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50">
                             {invSendingId === inv.id ? "..." : "Send"}
                           </button>
                           {inv.status !== "SENT" && (
                             <>
-                              <button onClick={() => router.push(`/invoices/${inv.id}/edit`)} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100">Edit</button>
-                              <button onClick={() => handleInvDelete(inv.id)} className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100">Del</button>
+                              <button onClick={() => router.push(`/invoices/${inv.id}/edit`)} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">Edit</button>
+                              <button onClick={() => handleInvDelete(inv.id)} className="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-xs font-medium hover:bg-red-100">Del</button>
                             </>
                           )}
                         </div>
@@ -437,23 +425,23 @@ export default function HistoryPage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-700">Electricity / Water Bills</h2>
-          <Link href="/electricity/new" className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors">+ New EB Bill</Link>
+          <Link href="/electricity/new" className="px-4 py-2 bg-orange-700 text-white rounded-lg text-sm font-medium hover:bg-orange-800 transition-colors">+ New EB Bill</Link>
         </div>
 
         <FilterBar search={ebSearch} onSearch={handleEbSearch} status={ebStatus} onStatus={handleEbStatus} placeholder="Search by tenant name..." />
 
         {ebLoading ? (
-          <div className="text-gray-500 text-sm py-6 text-center">Loading electricity bills...</div>
+          <div className="text-gray-500 text-sm py-6 text-center" role="status" aria-live="polite">Loading electricity bills...</div>
         ) : bills.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-500 text-sm">
+          <div className="bg-white rounded-xl p-6 text-center text-gray-500 text-sm" style={{ border: "1px solid var(--border)" }}>
             {ebSearch || ebStatus ? "No bills match your filters." : "No electricity bills yet."}
           </div>
         ) : (
           <>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-white rounded-xl overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
+              <table className="w-full text-sm min-w-[600px]">
                 <thead>
-                  <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
+                  <tr className="text-gray-600 text-xs uppercase" style={{ background: "var(--surface-secondary)" }}>
                     <th className="text-left px-4 py-3 font-semibold">Tenant</th>
                     <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Period</th>
                     <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Reading</th>
@@ -464,26 +452,26 @@ export default function HistoryPage() {
                 </thead>
                 <tbody>
                   {bills.map((bill) => (
-                    <tr key={bill.id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <tr key={bill.id} className="border-t hover:bg-gray-50" style={{ borderColor: "var(--border-light)" }}>
                       <td className="px-4 py-3">
                         <div className="font-medium">{bill.tenant.name}</div>
-                        {bill.status === "SENT" && bill.sentAt && <div className="text-xs text-green-600">Sent {formatDate(bill.sentAt)}</div>}
+                        {bill.status === "SENT" && bill.sentAt && <div className="text-xs text-green-700">Sent {formatDate(bill.sentAt)}</div>}
                       </td>
                       <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{bill.month} {bill.year}</td>
                       <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{bill.openingReading} &rarr; {bill.closingReading}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatCurrency(bill.netPayable)}</td>
-                      <td className="px-4 py-3 text-center">{statusBadge(bill.status)}</td>
+                      <td className="px-4 py-3 text-center"><StatusBadge status={bill.status} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => downloadEbPDF(bill.id, bill.tenant.name, bill.month, bill.year)} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200">PDF</button>
+                          <button onClick={() => downloadEbPDF(bill.id, bill.tenant.name, bill.month, bill.year)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">PDF</button>
                           <button onClick={() => openEbSendModal(bill)} disabled={ebSendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
-                            className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 disabled:opacity-50">
+                            className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50">
                             {ebSendingId === bill.id ? "..." : "Send"}
                           </button>
                           {bill.status !== "SENT" && (
                             <>
-                              <button onClick={() => router.push(`/electricity/${bill.id}/edit`)} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100">Edit</button>
-                              <button onClick={() => handleEbDelete(bill.id)} className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100">Del</button>
+                              <button onClick={() => router.push(`/electricity/${bill.id}/edit`)} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">Edit</button>
+                              <button onClick={() => handleEbDelete(bill.id)} className="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-xs font-medium hover:bg-red-100">Del</button>
                             </>
                           )}
                         </div>
@@ -504,23 +492,23 @@ export default function HistoryPage() {
       <section className="mt-10">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-700">Water Bills</h2>
-          <Link href="/water/new" className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors">+ New Water Bill</Link>
+          <Link href="/water/new" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">+ New Water Bill</Link>
         </div>
 
         <FilterBar search={wbSearch} onSearch={handleWbSearch} status={wbStatus} onStatus={handleWbStatus} placeholder="Search by tenant name..." />
 
         {wbLoading ? (
-          <div className="text-gray-500 text-sm py-6 text-center">Loading water bills...</div>
+          <div className="text-gray-500 text-sm py-6 text-center" role="status" aria-live="polite">Loading water bills...</div>
         ) : waterBills.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-500 text-sm">
+          <div className="bg-white rounded-xl p-6 text-center text-gray-500 text-sm" style={{ border: "1px solid var(--border)" }}>
             {wbSearch || wbStatus ? "No water bills match your filters." : "No water bills yet."}
           </div>
         ) : (
           <>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-white rounded-xl overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
+              <table className="w-full text-sm min-w-[600px]">
                 <thead>
-                  <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
+                  <tr className="text-gray-600 text-xs uppercase" style={{ background: "var(--surface-secondary)" }}>
                     <th className="text-left px-4 py-3 font-semibold">Tenant</th>
                     <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Period</th>
                     <th className="text-right px-4 py-3 font-semibold">Net Payable</th>
@@ -530,25 +518,25 @@ export default function HistoryPage() {
                 </thead>
                 <tbody>
                   {waterBills.map((bill) => (
-                    <tr key={bill.id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <tr key={bill.id} className="border-t hover:bg-gray-50" style={{ borderColor: "var(--border-light)" }}>
                       <td className="px-4 py-3">
                         <div className="font-medium">{bill.tenant.name}</div>
-                        {bill.status === "SENT" && bill.sentAt && <div className="text-xs text-green-600">Sent {formatDate(bill.sentAt)}</div>}
+                        {bill.status === "SENT" && bill.sentAt && <div className="text-xs text-green-700">Sent {formatDate(bill.sentAt)}</div>}
                       </td>
                       <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{bill.month} {bill.year}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatCurrency(bill.netPayable)}</td>
-                      <td className="px-4 py-3 text-center">{statusBadge(bill.status)}</td>
+                      <td className="px-4 py-3 text-center"><StatusBadge status={bill.status} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => downloadWbPDF(bill.id, bill.tenant.name, bill.month, bill.year)} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200">PDF</button>
+                          <button onClick={() => downloadWbPDF(bill.id, bill.tenant.name, bill.month, bill.year)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">PDF</button>
                           <button onClick={() => openWbSendModal(bill)} disabled={wbSendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
-                            className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 disabled:opacity-50">
+                            className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50">
                             {wbSendingId === bill.id ? "..." : "Send"}
                           </button>
                           {bill.status !== "SENT" && (
                             <>
-                              <button onClick={() => router.push(`/water/${bill.id}/edit`)} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100">Edit</button>
-                              <button onClick={() => handleWbDelete(bill.id)} className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100">Del</button>
+                              <button onClick={() => router.push(`/water/${bill.id}/edit`)} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">Edit</button>
+                              <button onClick={() => handleWbDelete(bill.id)} className="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-xs font-medium hover:bg-red-100">Del</button>
                             </>
                           )}
                         </div>
@@ -562,6 +550,16 @@ export default function HistoryPage() {
           </>
         )}
       </section>
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmHistoryDelete}
+        title={`Delete ${deleteTarget?.type === "invoice" ? "Invoice" : deleteTarget?.type === "eb" ? "Electricity Bill" : "Water Bill"}`}
+        message="Are you sure you want to delete this draft? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+      />
 
       <SendConfirmModal
         open={sendModal !== null}

@@ -6,6 +6,16 @@ import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/formatCurrency";
 import Link from "next/link";
 import SendConfirmModal from "@/components/SendConfirmModal";
+import ConfirmModal from "@/components/ConfirmModal";
+import StatusBadge from "@/components/StatusBadge";
+import { formatDate } from "@/lib/constants";
+import type { Pagination } from "@/lib/types";
+import { downloadPDF as downloadPDFUtil } from "@/lib/downloadPDF";
+import PageHeader from "@/components/PageHeader";
+import FilterBar from "@/components/FilterBar";
+import EmptyState from "@/components/EmptyState";
+import LoadingState from "@/components/LoadingState";
+import PaginationControls from "@/components/PaginationControls";
 
 interface WaterBill {
   id: string;
@@ -21,38 +31,6 @@ interface WaterBill {
   sender: { name: string };
 }
 
-interface Pagination {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
-const STATUS_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "DRAFT", label: "Draft" },
-  { value: "SENT", label: "Sent" },
-  { value: "FAILED", label: "Failed" },
-];
-
-function statusBadge(status: string) {
-  const styles: Record<string, string> = {
-    DRAFT: "bg-yellow-100 text-yellow-700",
-    SENT: "bg-green-100 text-green-700",
-    FAILED: "bg-red-100 text-red-700",
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${styles[status] || "bg-gray-100 text-gray-700"}`}>
-      {status}
-    </span>
-  );
-}
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} at ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
-}
-
 export default function WaterBillsPage() {
   const router = useRouter();
   const [bills, setBills] = useState<WaterBill[]>([]);
@@ -63,6 +41,7 @@ export default function WaterBillsPage() {
   const [loading, setLoading] = useState(true);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [sendModal, setSendModal] = useState<{
     id: string;
     pdfUrl: string;
@@ -110,8 +89,14 @@ export default function WaterBillsPage() {
     setSendModal(null);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this draft water bill?")) return;
+  const handleDelete = (id: string) => {
+    setDeleteTargetId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
+    const id = deleteTargetId;
+    setDeleteTargetId(null);
     try {
       const res = await fetch(`/api/water/${id}`, { method: "DELETE" });
       const data = await res.json();
@@ -119,124 +104,112 @@ export default function WaterBillsPage() {
     } catch { toast.error("Failed to delete water bill."); }
   };
 
-  const downloadPDF = (id: string, tenant: string, month: string, year: number) => {
-    const a = document.createElement("a"); a.href = `/api/water/${id}/pdf`; a.download = `Water-Bill-${tenant}-${month}-${year}.pdf`; a.click();
+  const downloadPDFFile = (id: string, tenant: string, month: string, year: number) => {
+    downloadPDFUtil(`/api/water/${id}/pdf`, `Water-Bill-${tenant}-${month}-${year}.pdf`);
   };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Water Bills</h1>
-        <Link href="/water/new" className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors">
-          + New Water Bill
-        </Link>
-      </div>
+      <PageHeader title="Water Bills" actionLabel="+ New Water Bill" actionHref="/water/new" />
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <input
-          type="text" value={search} onChange={(e) => handleSearch(e.target.value)} placeholder="Search by tenant name..."
-          className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-        />
-        <div className="flex gap-1">
-          {STATUS_OPTIONS.map((opt) => (
-            <button key={opt.value} onClick={() => handleStatus(opt.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${status === opt.value ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-            >{opt.label}</button>
-          ))}
-        </div>
-      </div>
+      <FilterBar
+        search={search}
+        onSearch={handleSearch}
+        statusFilter={status}
+        onStatusFilter={handleStatus}
+        searchPlaceholder="Search by tenant name..."
+        searchLabel="Search water bills"
+      />
 
       {loading ? (
-        <div className="text-gray-500 text-sm py-10 text-center">Loading water bills...</div>
+        <LoadingState message="Loading water bills..." />
       ) : bills.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
-          <p className="text-gray-500">
-            {search || status ? "No water bills match your filters." : "No water bills yet."}
-          </p>
-          {!search && !status && (
-            <Link href="/water/new" className="inline-block mt-3 text-teal-600 font-medium hover:text-teal-800">
-              Create your first water bill
-            </Link>
-          )}
-        </div>
+        <EmptyState
+          message={search || status ? "No water bills match your filters." : "No water bills yet."}
+          actionLabel={!search && !status ? "Create your first water bill" : undefined}
+          actionHref={!search && !status ? "/water/new" : undefined}
+        />
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3">
             {bills.map((bill) => (
-              <div key={bill.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <div className="font-semibold text-gray-800">
-                      {bill.month} {bill.year}
+              <div key={bill.id} className="bg-white rounded-xl shadow-sm p-5" style={{ border: "1px solid var(--border)" }}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-gray-800">
+                        {bill.month} {bill.year}
+                      </span>
+                      <StatusBadge status={bill.status} />
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">{bill.sender.name}</span> &rarr; {bill.tenant.name}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {bill.sender.name} &rarr; {bill.tenant.name}
+                      {bill.tenant.email ? bill.tenant.email : <span className="text-red-400 text-xs">No email</span>}
+                      {bill.invoiceNo ? ` | Invoice: ${bill.invoiceNo}` : ""}
+                    </div>
+                    {bill.status === "SENT" && bill.sentAt && (
+                      <div className="text-xs text-green-600 mt-1">
+                        Sent {formatDate(bill.sentAt)}
+                      </div>
+                    )}
+                    {bill.status === "DRAFT" && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        Created {formatDate(bill.createdAt)}
+                      </div>
+                    )}
+                    {bill.status === "FAILED" && (
+                      <div className="text-xs text-red-600 mt-1">
+                        Failed — created {formatDate(bill.createdAt)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="text-lg font-bold text-gray-800">
+                      {formatCurrency(bill.netPayable)}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => downloadPDFFile(bill.id, bill.tenant.name, bill.month, bill.year)}
+                        aria-label={`Download PDF for water bill ${bill.month} ${bill.year}`}
+                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">PDF</button>
+                      <button onClick={() => openSendModal(bill)}
+                        disabled={sendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
+                        title={!bill.tenant.email && !bill.tenant.ccEmails ? "No email configured for this tenant" : undefined}
+                        aria-label={`Send water bill ${bill.month} ${bill.year}`}
+                        className="px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors disabled:opacity-50">
+                        {sendingId === bill.id ? "Sending..." : "Send"}
+                      </button>
+                      {bill.status !== "SENT" && (
+                        <>
+                          <button onClick={() => router.push(`/water/${bill.id}/edit`)}
+                            aria-label={`Edit water bill ${bill.month} ${bill.year}`}
+                            className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors">Edit</button>
+                          <button onClick={() => handleDelete(bill.id)}
+                            aria-label={`Delete water bill ${bill.month} ${bill.year}`}
+                            className="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors">Delete</button>
+                        </>
+                      )}
                     </div>
                   </div>
-                  {statusBadge(bill.status)}
-                </div>
-
-                {bill.invoiceNo && (
-                  <div className="text-xs text-gray-500 mb-2">Invoice: {bill.invoiceNo}</div>
-                )}
-
-                <div className="text-sm text-gray-600 mb-2">
-                  {bill.tenant.email ? (
-                    <span className="text-gray-500">{bill.tenant.email}</span>
-                  ) : (
-                    <span className="text-red-400 text-xs">No email</span>
-                  )}
-                </div>
-
-                <div className="text-xs text-gray-400 mb-3">
-                  {bill.status === "SENT" && bill.sentAt
-                    ? `Sent ${formatDate(bill.sentAt)}`
-                    : bill.status === "FAILED"
-                    ? `Failed ${formatDate(bill.createdAt)}`
-                    : `Created ${formatDate(bill.createdAt)}`}
-                </div>
-
-                <div className="text-2xl font-bold text-teal-700 mb-4">
-                  {formatCurrency(bill.netPayable)}
-                </div>
-
-                <div className="flex gap-2">
-                  <button onClick={() => downloadPDF(bill.id, bill.tenant.name, bill.month, bill.year)}
-                    className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">PDF</button>
-                  <button onClick={() => openSendModal(bill)}
-                    disabled={sendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
-                    className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50">
-                    {sendingId === bill.id ? "..." : "Send"}
-                  </button>
-                  {bill.status !== "SENT" && (
-                    <>
-                      <button onClick={() => router.push(`/water/${bill.id}/edit`)}
-                        className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">Edit</button>
-                      <button onClick={() => handleDelete(bill.id)}
-                        className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100">Delete</button>
-                    </>
-                  )}
                 </div>
               </div>
             ))}
           </div>
 
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-gray-500">
-                {(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => handlePage(page - 1)} disabled={page <= 1}
-                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50">Prev</button>
-                <button onClick={() => handlePage(page + 1)} disabled={page >= pagination.totalPages}
-                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50">Next</button>
-              </div>
-            </div>
-          )}
+          <PaginationControls pagination={pagination} currentPage={page} onPageChange={handlePage} />
         </>
       )}
+
+      <ConfirmModal
+        open={deleteTargetId !== null}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={confirmDelete}
+        title="Delete Water Bill"
+        message="Are you sure you want to delete this draft water bill? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+      />
 
       <SendConfirmModal
         open={sendModal !== null}

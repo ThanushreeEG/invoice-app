@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { MONTHS } from "@/lib/constants";
 
 interface Sender {
   id: string;
@@ -30,11 +31,6 @@ interface WaterBill {
   sender: { id: string; name: string };
   building: { id: string; name: string; address: string } | null;
 }
-
-const MONTHS = [
-  "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
-  "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
-];
 
 export default function EditWaterBillPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -110,7 +106,7 @@ export default function EditWaterBillPage({ params }: { params: Promise<{ id: st
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
         <div className="text-lg text-gray-500">Loading...</div>
       </div>
     );
@@ -136,26 +132,26 @@ export default function EditWaterBillPage({ params }: { params: Promise<{ id: st
       </h1>
 
       {/* Tenant Info */}
-      <div className="bg-teal-50 rounded-xl border border-teal-200 p-4 mb-6">
+      <div className="bg-blue-50 rounded-xl border border-blue-200 p-4 mb-6">
         <div className="font-semibold text-gray-800">{bill.tenant.name}</div>
         <div className="text-sm text-gray-600">{bill.tenant.propertyAddress}</div>
       </div>
 
       {/* Sender & Building */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-4" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">Sender & Building</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Sender</label>
             <select value={senderId} onChange={(e) => setSenderId(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
               {senders.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Building</label>
             <select value={buildingId} onChange={(e) => setBuildingId(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
               {buildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
@@ -163,45 +159,45 @@ export default function EditWaterBillPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Month & Year */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-4" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">Bill Period</h2>
         <div className="flex gap-3">
           <select value={month} onChange={(e) => setMonth(e.target.value)}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
           <input type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value))}
-            className="w-28 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            className="w-28 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
       </div>
 
       {/* Water Charges */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-4" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">Charges</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Water Charges *</label>
             <input type="number" step="0.01" value={waterCharges || ""}
               onChange={(e) => setWaterCharges(parseFloat(e.target.value) || 0)}
-              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter water charge amount" />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Invoice No</label>
             <input type="text" value={invoiceNo}
               onChange={(e) => setInvoiceNo(e.target.value)}
-              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Optional" />
           </div>
         </div>
 
         {waterCharges > 0 && (
-          <div className="bg-teal-50 rounded-lg p-4">
+          <div className="bg-blue-50 rounded-lg p-4">
             <div className="flex justify-between text-sm text-gray-600 mb-1">
               <span>Water Charges</span>
               <span>{formatCurrency(waterCharges)}</span>
             </div>
-            <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-teal-200 mt-2">
+            <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-blue-200 mt-2">
               <span>Net Payable</span>
               <span>{formatCurrency(waterCharges)}</span>
             </div>
@@ -216,7 +212,7 @@ export default function EditWaterBillPage({ params }: { params: Promise<{ id: st
           Cancel
         </button>
         <button onClick={handleSave} disabled={saving || waterCharges <= 0}
-          className="flex-1 py-4 bg-teal-600 text-white text-lg font-semibold rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-50">
+          className="flex-1 py-4 bg-blue-600 text-white text-lg font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50">
           {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>

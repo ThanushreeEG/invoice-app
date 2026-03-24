@@ -3,6 +3,8 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { inputClass, labelClass } from "@/lib/ui";
+import LoadingState from "@/components/LoadingState";
 
 interface Building {
   id: string;
@@ -99,27 +101,20 @@ export default function EditTenantPage({
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-lg text-gray-500">Loading...</div>
-      </div>
-    );
+    return <LoadingState />;
   }
-
-  const inputClass =
-    "w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
-  const labelClass = "block text-sm font-semibold text-gray-700 mb-1";
 
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Edit Tenant</h1>
 
       <form onSubmit={handleSubmit}>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6" style={{ border: "1px solid var(--border)" }}>
           <div className="space-y-4">
             <div>
-              <label className={labelClass}>Tenant / Company Name *</label>
+              <label htmlFor="tenantName" className={labelClass}>Tenant / Company Name *</label>
               <input
+                id="tenantName"
                 type="text"
                 className={inputClass}
                 value={form.name}
@@ -128,8 +123,9 @@ export default function EditTenantPage({
             </div>
 
             <div>
-              <label className={labelClass}>Email</label>
+              <label htmlFor="tenantEmail" className={labelClass}>Email</label>
               <input
+                id="tenantEmail"
                 type="text"
                 className={inputClass}
                 value={form.email}
@@ -141,8 +137,9 @@ export default function EditTenantPage({
             </div>
 
             <div>
-              <label className={labelClass}>Additional Emails (CC)</label>
+              <label htmlFor="ccEmails" className={labelClass}>Additional Emails (CC)</label>
               <input
+                id="ccEmails"
                 type="text"
                 className={inputClass}
                 value={form.ccEmails}
@@ -155,8 +152,9 @@ export default function EditTenantPage({
             </div>
 
             <div>
-              <label className={labelClass}>Phone</label>
+              <label htmlFor="phone" className={labelClass}>Phone</label>
               <input
+                id="phone"
                 type="text"
                 className={inputClass}
                 value={form.phone}
@@ -165,8 +163,9 @@ export default function EditTenantPage({
             </div>
 
             <div>
-              <label className={labelClass}>Property Address *</label>
+              <label htmlFor="propertyAddress" className={labelClass}>Property Address *</label>
               <textarea
+                id="propertyAddress"
                 className={inputClass}
                 rows={2}
                 value={form.propertyAddress}
@@ -177,8 +176,9 @@ export default function EditTenantPage({
             </div>
 
             <div>
-              <label className={labelClass}>Building / Property</label>
+              <label htmlFor="buildingId" className={labelClass}>Building / Property</label>
               <select
+                id="buildingId"
                 className={inputClass}
                 value={form.buildingId}
                 onChange={(e) => setForm({ ...form, buildingId: e.target.value })}
@@ -196,8 +196,9 @@ export default function EditTenantPage({
             </div>
 
             <div>
-              <label className={labelClass}>GST Number</label>
+              <label htmlFor="gstNumber" className={labelClass}>GST Number</label>
               <input
+                id="gstNumber"
                 type="text"
                 className={inputClass}
                 value={form.gstNumber}
@@ -208,8 +209,9 @@ export default function EditTenantPage({
             </div>
 
             <div>
-              <label className={labelClass}>Default Invoice Description</label>
+              <label htmlFor="defaultDescription" className={labelClass}>Default Invoice Description</label>
               <input
+                id="defaultDescription"
                 type="text"
                 className={inputClass}
                 value={form.defaultDescription}
@@ -224,8 +226,9 @@ export default function EditTenantPage({
             </div>
 
             <div>
-              <label className={labelClass}>Default Monthly Rent</label>
+              <label htmlFor="defaultRent" className={labelClass}>Default Monthly Rent</label>
               <input
+                id="defaultRent"
                 type="number"
                 step="0.01"
                 className={inputClass}
@@ -238,7 +241,7 @@ export default function EditTenantPage({
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6" style={{ border: "1px solid var(--border)" }}>
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Electricity Defaults</h2>
           <p className="text-xs text-gray-400 mb-4">
             These values are pre-filled when creating electricity bills for this tenant.
@@ -246,8 +249,9 @@ export default function EditTenantPage({
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>Multiplication Factor (CT Ratio)</label>
+                <label htmlFor="elecMultiplier" className={labelClass}>Multiplication Factor (CT Ratio)</label>
                 <input
+                  id="elecMultiplier"
                   type="number"
                   className={inputClass}
                   value={form.elecMultiplier}
@@ -255,8 +259,9 @@ export default function EditTenantPage({
                 />
               </div>
               <div>
-                <label className={labelClass}>Min Charge Units</label>
+                <label htmlFor="elecMinChargeUnits" className={labelClass}>Min Charge Units</label>
                 <input
+                  id="elecMinChargeUnits"
                   type="number"
                   className={inputClass}
                   value={form.elecMinChargeUnits}
@@ -266,8 +271,9 @@ export default function EditTenantPage({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className={labelClass}>KVA</label>
+                <label htmlFor="elecKVA" className={labelClass}>KVA</label>
                 <input
+                  id="elecKVA"
                   type="number"
                   className={inputClass}
                   value={form.elecKVA}
@@ -275,8 +281,9 @@ export default function EditTenantPage({
                 />
               </div>
               <div>
-                <label className={labelClass}>BWSSB Charges</label>
+                <label htmlFor="elecBWSSB" className={labelClass}>BWSSB Charges</label>
                 <input
+                  id="elecBWSSB"
                   type="number"
                   step="0.01"
                   className={inputClass}
@@ -285,8 +292,9 @@ export default function EditTenantPage({
                 />
               </div>
               <div>
-                <label className={labelClass}>Maintenance Charges</label>
+                <label htmlFor="elecMaintenance" className={labelClass}>Maintenance Charges</label>
                 <input
+                  id="elecMaintenance"
                   type="number"
                   step="0.01"
                   className={inputClass}
@@ -297,8 +305,9 @@ export default function EditTenantPage({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>DG Maintenance</label>
+                <label htmlFor="elecDgMaintenance" className={labelClass}>DG Maintenance</label>
                 <input
+                  id="elecDgMaintenance"
                   type="number"
                   step="0.01"
                   className={inputClass}
@@ -307,8 +316,9 @@ export default function EditTenantPage({
                 />
               </div>
               <div>
-                <label className={labelClass}>Water Charges</label>
+                <label htmlFor="elecWaterCharges" className={labelClass}>Water Charges</label>
                 <input
+                  id="elecWaterCharges"
                   type="number"
                   step="0.01"
                   className={inputClass}

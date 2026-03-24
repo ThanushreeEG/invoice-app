@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { calculateGST } from "@/lib/gst";
 import { formatCurrency, formatInvoiceAmount } from "@/lib/formatCurrency";
 import { amountInWords } from "@/lib/amountInWords";
+import { MONTHS } from "@/lib/constants";
 import SendConfirmModal from "@/components/SendConfirmModal";
 
 interface Sender {
@@ -39,11 +40,6 @@ interface TenantInvoice {
   description: string;
   invoiceNumber: string;
 }
-
-const MONTHS = [
-  "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
-  "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
-];
 
 export default function NewInvoicePage() {
   const router = useRouter();
@@ -296,7 +292,7 @@ export default function NewInvoicePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
         <div className="text-lg text-gray-500">Loading...</div>
       </div>
     );
@@ -309,7 +305,7 @@ export default function NewInvoicePage() {
       </h1>
 
       {/* Sender Selection */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-4" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">
           Sender (Landlord)
         </h2>
@@ -334,7 +330,7 @@ export default function NewInvoicePage() {
       </div>
 
       {/* Building Selection */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-4" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">
           Building / Property
         </h2>
@@ -366,28 +362,36 @@ export default function NewInvoicePage() {
       </div>
 
       {/* Month/Year Selector */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-6" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">
           Invoice Period
         </h2>
         <div className="flex gap-3">
-          <select
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="flex-1 px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {MONTHS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            value={year}
-            onChange={(e) => setYear(parseInt(e.target.value))}
-            className="w-28 px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="flex-1">
+            <label htmlFor="invoiceMonth" className="sr-only">Month</label>
+            <select
+              id="invoiceMonth"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="invoiceYear" className="sr-only">Year</label>
+            <input
+              id="invoiceYear"
+              type="number"
+              value={year}
+              onChange={(e) => setYear(parseInt(e.target.value))}
+              className="w-28 px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
         <p className="text-xs text-gray-400 mt-2">
           Invoice date will be set to 01/{String(MONTHS.indexOf(month) + 1).padStart(2, "0")}/{year}
@@ -397,7 +401,7 @@ export default function NewInvoicePage() {
       {/* Step 1: Select Tenants */}
       {step === "select" && (
         <>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+          <div className="bg-white rounded-xl shadow-sm p-5 mb-6" style={{ border: "1px solid var(--border)" }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-gray-700">
                 Select Tenants ({selected.length} selected)
@@ -463,7 +467,7 @@ export default function NewInvoicePage() {
                           </div>
                         </div>
                         {tenant.defaultRent > 0 && (
-                          <div className="text-sm font-medium text-green-600">
+                          <div className="text-sm font-medium text-green-700">
                             {formatCurrency(tenant.defaultRent)}
                           </div>
                         )}
@@ -494,7 +498,8 @@ export default function NewInvoicePage() {
               return (
                 <div
                   key={item.tenantId}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-5"
+                  className="bg-white rounded-xl shadow-sm p-5"
+                  style={{ border: "1px solid var(--border)" }}
                 >
                   <h3 className="font-semibold text-gray-800 mb-1">
                     {item.tenant.name}
@@ -565,7 +570,7 @@ export default function NewInvoicePage() {
                   </div>
 
                   {item.baseRent > 0 && (
-                    <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="rounded-lg p-4" style={{ background: "var(--surface-secondary)" }}>
                       <div className="flex justify-between text-sm text-gray-600 mb-1">
                         <span>Base Rent</span>
                         <span>{formatInvoiceAmount(item.baseRent)}</span>
@@ -617,7 +622,8 @@ export default function NewInvoicePage() {
               return (
                 <div
                   key={item.tenantId}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                  className="bg-white rounded-xl shadow-sm p-6"
+                  style={{ border: "1px solid var(--border)" }}
                 >
                   {/* Invoice Header */}
                   <div className="text-center mb-4">
@@ -697,7 +703,7 @@ export default function NewInvoicePage() {
                           {formatInvoiceAmount(gst.sgst)}
                         </td>
                       </tr>
-                      <tr className="bg-gray-50 font-bold">
+                      <tr className="font-bold" style={{ background: "var(--surface-secondary)" }}>
                         <td className="border border-gray-300 px-3 py-2 text-sm">
                           Total Rental Amount
                         </td>
@@ -734,32 +740,32 @@ export default function NewInvoicePage() {
             </div>
           )}
 
-          <div className="flex gap-3 mb-8">
+          <div className="grid grid-cols-2 sm:flex gap-3 mb-8">
             <button
               onClick={() => setStep("details")}
               disabled={sending}
-              className="px-6 py-4 bg-gray-100 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className="px-6 py-4 bg-gray-100 text-gray-700 text-base sm:text-lg font-semibold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
               Back
             </button>
             <button
               onClick={handleSaveDraft}
               disabled={sending}
-              className="px-6 py-4 bg-gray-600 text-white text-lg font-semibold rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50"
+              className="px-6 py-4 bg-gray-600 text-white text-base sm:text-lg font-semibold rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
               Save Draft
             </button>
             <button
               onClick={handleDownloadPDF}
               disabled={sending}
-              className="px-6 py-4 bg-purple-600 text-white text-lg font-semibold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50"
+              className="px-6 py-4 bg-purple-700 text-white text-base sm:text-lg font-semibold rounded-xl hover:bg-purple-800 transition-colors disabled:opacity-50"
             >
               {sending && sendProgress.includes("PDF") ? "Downloading..." : "Download PDF"}
             </button>
             <button
               onClick={() => setShowSendModal(true)}
               disabled={sending}
-              className="flex-1 py-4 bg-green-600 text-white text-lg font-semibold rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50"
+              className="col-span-2 sm:flex-1 py-4 bg-green-700 text-white text-base sm:text-lg font-semibold rounded-xl hover:bg-green-800 transition-colors disabled:opacity-50"
             >
               {sending ? "Sending..." : "Send Invoice(s)"}
             </button>

@@ -4,11 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/formatCurrency";
-
-const MONTHS = [
-  "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
-  "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
-];
+import { MONTHS } from "@/lib/constants";
 
 interface Sender {
   id: string;
@@ -128,7 +124,7 @@ export default function EditElectricityBillPage({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
         <div className="text-lg text-gray-500">Loading...</div>
       </div>
     );
@@ -144,7 +140,7 @@ export default function EditElectricityBillPage({
 
       <form onSubmit={handleSubmit}>
         {/* Sender & Building */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-4" style={{ border: "1px solid var(--border)" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Sender</label>
@@ -197,7 +193,7 @@ export default function EditElectricityBillPage({
         </div>
 
         {/* Invoice No */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-4" style={{ border: "1px solid var(--border)" }}>
           <div>
             <label className={labelClass}>Invoice No</label>
             <input
@@ -211,7 +207,7 @@ export default function EditElectricityBillPage({
         </div>
 
         {/* Readings */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-4" style={{ border: "1px solid var(--border)" }}>
           <h2 className="text-base font-semibold text-gray-700 mb-4">Meter Readings</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -260,7 +256,7 @@ export default function EditElectricityBillPage({
         </div>
 
         {/* Additional charges */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-4" style={{ border: "1px solid var(--border)" }}>
           <h2 className="text-base font-semibold text-gray-700 mb-4">Additional Charges</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -310,9 +306,9 @@ export default function EditElectricityBillPage({
 
         {/* Live calculations */}
         {form.closingReading > 0 && form.ratePerUnit > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6" style={{ border: "1px solid var(--border)" }}>
             <h2 className="text-base font-semibold text-gray-700 mb-3">Calculated Summary</h2>
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="rounded-lg p-4" style={{ background: "var(--surface-secondary)" }}>
               <div className="flex justify-between text-sm text-gray-600 mb-1">
                 <span>Units Consumed</span>
                 <span>{unitsConsumed}</span>

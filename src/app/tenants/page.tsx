@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/formatCurrency";
+import ConfirmModal from "@/components/ConfirmModal";
+import PageHeader from "@/components/PageHeader";
+import LoadingState from "@/components/LoadingState";
+import EmptyState from "@/components/EmptyState";
 
 interface Tenant {
   id: string;
@@ -20,6 +24,7 @@ interface Tenant {
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const fetchTenants = () => {
     fetch("/api/tenants")
@@ -36,8 +41,13 @@ export default function TenantsPage() {
   }, []);
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to remove ${name}?`)) return;
+    setDeleteTarget({ id, name });
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { id, name } = deleteTarget;
+    setDeleteTarget(null);
     const res = await fetch(`/api/tenants/${id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success(`${name} removed.`);
@@ -48,43 +58,22 @@ export default function TenantsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-lg text-gray-500">Loading tenants...</div>
-      </div>
-    );
+    return <LoadingState message="Loading tenants..." />;
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Tenants</h1>
-        <Link
-          href="/tenants/new"
-          className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors text-base"
-        >
-          + Add Tenant
-        </Link>
-      </div>
+      <PageHeader title="Tenants" actionLabel="+ Add Tenant" actionHref="/tenants/new" />
 
       {tenants.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-10 text-center">
-          <p className="text-lg text-gray-500 mb-4">
-            No tenants added yet.
-          </p>
-          <Link
-            href="/tenants/new"
-            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Add Your First Tenant
-          </Link>
-        </div>
+        <EmptyState message="No tenants added yet." actionLabel="Add Your First Tenant" actionHref="/tenants/new" />
       ) : (
         <div className="space-y-4">
           {tenants.map((tenant) => (
             <div
               key={tenant.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-5"
+              className="bg-white rounded-xl shadow-sm p-5"
+              style={{ border: "1px solid var(--border)" }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex-1">
@@ -110,7 +99,7 @@ export default function TenantsPage() {
                     </p>
                   )}
                   {tenant.defaultRent > 0 && (
-                    <p className="text-sm text-green-600 font-medium mt-1">
+                    <p className="text-sm text-green-700 font-medium mt-1">
                       Default Rent: {formatCurrency(tenant.defaultRent)}
                     </p>
                   )}
@@ -118,13 +107,13 @@ export default function TenantsPage() {
                 <div className="flex gap-2">
                   <Link
                     href={`/tenants/${tenant.id}/edit`}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                    className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
                   >
                     Edit
                   </Link>
                   <button
                     onClick={() => handleDelete(tenant.id, tenant.name)}
-                    className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors"
+                    className="px-4 py-2.5 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors"
                   >
                     Remove
                   </button>
@@ -134,6 +123,16 @@ export default function TenantsPage() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Remove Tenant"
+        message={`Are you sure you want to remove ${deleteTarget?.name ?? "this tenant"}? This action cannot be undone.`}
+        confirmLabel="Remove"
+        variant="danger"
+      />
     </div>
   );
 }

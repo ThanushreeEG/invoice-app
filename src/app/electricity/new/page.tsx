@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { MONTHS } from "@/lib/constants";
 import SendConfirmModal from "@/components/SendConfirmModal";
 
 interface Sender {
@@ -46,11 +47,6 @@ interface TenantBill {
   invoiceNo: string;
   hasLastReading: boolean;
 }
-
-const MONTHS = [
-  "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
-  "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
-];
 
 function calcBill(item: TenantBill) {
   const unitsConsumed = Math.max(0, item.closingReading - item.openingReading);
@@ -346,14 +342,6 @@ export default function NewElectricityBillPage() {
     setSending(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-lg text-gray-500">Loading...</div>
-      </div>
-    );
-  }
-
   const selectedSender = senders.find((s) => s.id === selectedSenderId);
   const senderBuildings = selectedSender?.buildingIds?.length
     ? buildings.filter((b) => selectedSender.buildingIds.includes(b.id))
@@ -368,6 +356,14 @@ export default function NewElectricityBillPage() {
     }
   }, [selectedSenderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
+        <div className="text-lg text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">
@@ -375,7 +371,7 @@ export default function NewElectricityBillPage() {
       </h1>
 
       {/* Sender Selection */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-4" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">
           Sender (Landlord)
         </h2>
@@ -397,7 +393,7 @@ export default function NewElectricityBillPage() {
       </div>
 
       {/* Building Selection */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-4" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">
           Building / Property
         </h2>
@@ -424,7 +420,7 @@ export default function NewElectricityBillPage() {
       </div>
 
       {/* Month/Year Selector */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-6" style={{ border: "1px solid var(--border)" }}>
         <h2 className="text-base font-semibold text-gray-700 mb-3">
           Bill Period
         </h2>
@@ -452,7 +448,7 @@ export default function NewElectricityBillPage() {
       {/* Step 1: Select Tenants */}
       {step === "select" && (
         <>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+          <div className="bg-white rounded-xl shadow-sm p-5 mb-6" style={{ border: "1px solid var(--border)" }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-gray-700">
                 Select Tenants ({selected.length} selected)
@@ -530,7 +526,7 @@ export default function NewElectricityBillPage() {
               return (
                 <div
                   key={item.tenantId}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-5"
+                  className="bg-white rounded-xl shadow-sm p-5" style={{ border: "1px solid var(--border)" }}
                 >
                   <h3 className="font-semibold text-gray-800 mb-1">
                     {item.tenant.name}
@@ -555,7 +551,7 @@ export default function NewElectricityBillPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Opening Reading {item.hasLastReading && <span className="text-xs text-green-600 font-normal">(auto-filled)</span>}
+                        Opening Reading {item.hasLastReading && <span className="text-xs text-green-700 font-normal">(auto-filled)</span>}
                       </label>
                       <input
                         type="number"
@@ -666,7 +662,7 @@ export default function NewElectricityBillPage() {
                   </div>
 
                   {item.closingReading > 0 && item.ratePerUnit > 0 && (
-                    <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="rounded-lg p-4" style={{ background: "var(--surface-secondary)" }}>
                       <div className="flex justify-between text-sm text-gray-600 mb-1">
                         <span>Units Consumed ({item.closingReading} - {item.openingReading})</span>
                         <span>{calc.unitsConsumed}</span>
@@ -755,7 +751,7 @@ export default function NewElectricityBillPage() {
               return (
                 <div
                   key={item.tenantId}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                  className="bg-white rounded-xl shadow-sm p-6" style={{ border: "1px solid var(--border)" }}
                 >
                   {/* Bill Header */}
                   <div className="text-center mb-4">
@@ -819,7 +815,7 @@ export default function NewElectricityBillPage() {
                           <td className="border border-gray-300 px-3 py-2 text-sm text-right">{item.miscUnits}</td>
                         </tr>
                       )}
-                      <tr className="bg-gray-50 font-semibold">
+                      <tr className="font-semibold" style={{ background: "var(--surface-secondary)" }}>
                         <td className="border border-gray-300 px-3 py-2 text-sm">Total Units Charged</td>
                         <td className="border border-gray-300 px-3 py-2 text-sm text-right">{calc.totalUnitsCharged}</td>
                       </tr>
@@ -867,7 +863,7 @@ export default function NewElectricityBillPage() {
                           <td className="border border-gray-300 px-3 py-2 text-sm text-right">{formatCurrency(item.waterCharges)}</td>
                         </tr>
                       )}
-                      <tr className="bg-gray-50 font-bold">
+                      <tr className="font-bold" style={{ background: "var(--surface-secondary)" }}>
                         <td className="border border-gray-300 px-3 py-2 text-sm">Net Payable</td>
                         <td className="border border-gray-300 px-3 py-2 text-sm text-right">{formatCurrency(calc.netPayable)}</td>
                       </tr>
