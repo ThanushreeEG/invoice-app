@@ -9,6 +9,7 @@ import SendConfirmModal from "@/components/SendConfirmModal";
 import ConfirmModal from "@/components/ConfirmModal";
 import StatusBadge from "@/components/StatusBadge";
 import { STATUS_OPTIONS, MONTHS as MONTH_NAMES, MONTH_SHORT, formatDate } from "@/lib/constants";
+import { downloadPDF } from "@/lib/downloadPDF";
 
 interface Invoice {
   id: string;
@@ -180,7 +181,8 @@ export default function HistoryPage() {
       if (res.ok) { toast.success("Invoice sent!"); fetchInvoices(); } else { toast.error(data.error || "Failed to send."); }
     } catch { toast.error("Failed to send invoice."); }
     setInvSendingId(null);
-    setSendModal(null);
+    // Only close the dialog if it still shows this bill (the user may have closed it and opened another).
+    setSendModal((m) => (m?.id === id ? null : m));
   };
 
   const handleInvDelete = (id: string) => {
@@ -211,7 +213,8 @@ export default function HistoryPage() {
       if (res.ok) { toast.success("Bill sent!"); fetchBills(); } else { toast.error(data.error || "Failed to send."); }
     } catch { toast.error("Failed to send bill."); }
     setEbSendingId(null);
-    setSendModal(null);
+    // Only close the dialog if it still shows this bill (the user may have closed it and opened another).
+    setSendModal((m) => (m?.id === id ? null : m));
   };
 
   const handleEbDelete = (id: string) => {
@@ -242,7 +245,8 @@ export default function HistoryPage() {
       if (res.ok) { toast.success("Water bill sent!"); fetchWaterBills(); } else { toast.error(data.error || "Failed to send."); }
     } catch { toast.error("Failed to send water bill."); }
     setWbSendingId(null);
-    setSendModal(null);
+    // Only close the dialog if it still shows this bill (the user may have closed it and opened another).
+    setSendModal((m) => (m?.id === id ? null : m));
   };
 
   const handleWbDelete = (id: string) => {
@@ -271,15 +275,13 @@ export default function HistoryPage() {
   };
 
   // Download helpers
-  const downloadInvPDF = (id: string, num: string) => {
-    const a = document.createElement("a"); a.href = `/api/invoices/${id}/pdf`; a.download = `Invoice-${num}.pdf`; a.click();
-  };
-  const downloadEbPDF = (id: string, tenant: string, month: string, year: number) => {
-    const a = document.createElement("a"); a.href = `/api/electricity/${id}/pdf`; a.download = `EB-Bill-${tenant}-${month}-${year}.pdf`; a.click();
-  };
-  const downloadWbPDF = (id: string, tenant: string, month: string, year: number) => {
-    const a = document.createElement("a"); a.href = `/api/water/${id}/pdf`; a.download = `Water-Bill-${tenant}-${month}-${year}.pdf`; a.click();
-  };
+  const saveOrWarn = (p: Promise<void>) => p.catch(() => toast.error("Failed to download PDF."));
+  const downloadInvPDF = (id: string, num: string) =>
+    saveOrWarn(downloadPDF(`/api/invoices/${id}/pdf`, `Invoice-${num}.pdf`));
+  const downloadEbPDF = (id: string, tenant: string, month: string, year: number) =>
+    saveOrWarn(downloadPDF(`/api/electricity/${id}/pdf`, `EB-Bill-${tenant}-${month}-${year}.pdf`));
+  const downloadWbPDF = (id: string, tenant: string, month: string, year: number) =>
+    saveOrWarn(downloadPDF(`/api/water/${id}/pdf`, `Water-Bill-${tenant}-${month}-${year}.pdf`));
 
   // Shared pagination component
   const PaginationControls = ({ pagination, currentPage, onPageChange }: { pagination: Pagination; currentPage: number; onPageChange: (p: number) => void }) =>
@@ -575,7 +577,7 @@ export default function HistoryPage() {
         title={sendModal?.title || ""}
         recipientEmail={sendModal?.email || ""}
         ccEmails={sendModal?.ccEmails}
-        sending={invSendingId !== null || ebSendingId !== null || wbSendingId !== null}
+        sending={!!sendModal && [invSendingId, ebSendingId, wbSendingId].includes(sendModal.id)}
       />
     </div>
   );

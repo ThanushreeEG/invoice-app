@@ -118,7 +118,8 @@ export default function ElectricityBillsPage() {
       toast.error("Failed to send bill.");
     }
     setSendingId(null);
-    setSendModal(null);
+    // Only close the dialog if it still shows this bill (the user may have closed it and opened another).
+    setSendModal((m) => (m?.id === id ? null : m));
   };
 
   const handleDelete = (id: string) => {
@@ -144,7 +145,7 @@ export default function ElectricityBillsPage() {
   };
 
   const handleDownloadPDF = (id: string, tenantName: string, month: string, year: number) => {
-    downloadPDF(`/api/electricity/${id}/pdf`, `Electricity-Bill-${tenantName}-${month}-${year}.pdf`);
+    downloadPDF(`/api/electricity/${id}/pdf`, `Electricity-Bill-${tenantName}-${month}-${year}.pdf`).catch(() => toast.error("Failed to download PDF."));
   };
 
   if (loading) {
@@ -279,7 +280,7 @@ export default function ElectricityBillsPage() {
         title={sendModal?.title || ""}
         recipientEmail={sendModal?.email || ""}
         ccEmails={sendModal?.ccEmails}
-        sending={sendingId !== null}
+        sending={sendingId !== null && sendingId === sendModal?.id}
       />
     </div>
   );

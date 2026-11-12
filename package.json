@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "postinstall": "prisma generate",
+    "postinstall": "node -e \"const fs=require('fs');fs.mkdirSync('public',{recursive:true});fs.copyFileSync('node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs','public/pdf.worker.min.mjs')\" && prisma generate",
     "db:migrate": "prisma migrate deploy",
     "start": "next start",
     "lint": "eslint",
@@ -22,6 +22,7 @@
     "lucide-react": "^1.0.1",
     "next": "16.1.6",
     "nodemailer": "^8.0.1",
+    "pdfjs-dist": "4.10.38",
     "pdfmake": "^0.3.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",

@@ -120,7 +120,8 @@ export default function InvoicesPage() {
       toast.error("Failed to send invoice.");
     }
     setSendingId(null);
-    setSendModal(null);
+    // Only close the dialog if it still shows this bill (the user may have closed it and opened another).
+    setSendModal((m) => (m?.id === id ? null : m));
   };
 
   const handleDelete = (id: string) => {
@@ -146,7 +147,7 @@ export default function InvoicesPage() {
   };
 
   const handleDownloadPDF = (id: string, invoiceNumber: string) => {
-    downloadPDF(`/api/invoices/${id}/pdf`, `Invoice-${invoiceNumber}.pdf`);
+    downloadPDF(`/api/invoices/${id}/pdf`, `Invoice-${invoiceNumber}.pdf`).catch(() => toast.error("Failed to download PDF."));
   };
 
   if (loading) {
@@ -284,7 +285,7 @@ export default function InvoicesPage() {
         title={sendModal?.title || ""}
         recipientEmail={sendModal?.email || ""}
         ccEmails={sendModal?.ccEmails}
-        sending={sendingId !== null}
+        sending={sendingId !== null && sendingId === sendModal?.id}
       />
     </div>
   );

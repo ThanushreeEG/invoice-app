@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
+import PdfViewer from "./PdfViewer";
 
 interface SendConfirmModalProps {
   open: boolean;
@@ -28,7 +29,9 @@ export default function SendConfirmModal({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !sending) {
+      // Closing is always allowed, even mid-send: the request keeps running
+      // and the page shows a toast when it finishes.
+      if (e.key === "Escape") {
         onClose();
         return;
       }
@@ -51,7 +54,7 @@ export default function SendConfirmModal({
         }
       }
     },
-    [onClose, sending]
+    [onClose]
   );
 
   useEffect(() => {
@@ -82,7 +85,7 @@ export default function SendConfirmModal({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50"
-        onClick={sending ? undefined : onClose}
+        onClick={onClose}
         aria-hidden="true"
       />
 
@@ -100,9 +103,8 @@ export default function SendConfirmModal({
           <h2 id="send-modal-title" className="text-lg font-semibold text-gray-800">{title}</h2>
           <button
             onClick={onClose}
-            disabled={sending}
             aria-label="Close dialog"
-            className="text-gray-400 hover:text-gray-600 disabled:opacity-50 p-1 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            className="text-gray-400 hover:text-gray-600 p-2 -m-1 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -113,14 +115,11 @@ export default function SendConfirmModal({
         {/* Body */}
         <div className="flex-1 overflow-auto px-6 py-4">
           {/* PDF Preview */}
-          {pdfUrl && (
-            <div className="mb-4">
-              <iframe
-                src={pdfUrl}
-                className="w-full rounded-lg border border-gray-200"
-                style={{ height: "450px" }}
-                title="PDF Preview"
-              />
+          {pdfUrl && <PdfViewer url={pdfUrl} className="mb-4" />}
+
+          {sending && (
+            <div role="status" className="bg-blue-50 text-blue-700 rounded-lg p-3 mb-4 text-sm">
+              Sending… You can close this window. Sending continues in the background, and you&apos;ll see a message when it&apos;s done.
             </div>
           )}
 
@@ -145,10 +144,9 @@ export default function SendConfirmModal({
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
           <button
             onClick={onClose}
-            disabled={sending}
-            className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           >
-            Cancel
+            {sending ? "Close" : "Cancel"}
           </button>
           <button
             onClick={onConfirm}

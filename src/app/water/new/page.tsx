@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { MONTHS } from "@/lib/constants";
 import SendConfirmModal from "@/components/SendConfirmModal";
+import { downloadPDFs } from "@/lib/downloadPDF";
 
 interface Sender {
   id: string;
@@ -203,13 +204,12 @@ export default function NewWaterBillPage() {
       const bills = await res.json();
       setSendProgress("Downloading PDFs...");
 
-      for (const bill of bills) {
-        const link = document.createElement("a");
-        link.href = `/api/water/${bill.id}/pdf`;
-        link.download = `Water-Bill-${bill.tenant.name}-${month}-${year}.pdf`;
-        link.click();
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
+      await downloadPDFs(
+        bills.map((bill: { id: string; tenant: { name: string } }) => ({
+          url: `/api/water/${bill.id}/pdf`,
+          filename: `Water-Bill-${bill.tenant.name}-${month}-${year}.pdf`,
+        }))
+      );
 
       toast.success(`${bills.length} water bill(s) saved & PDF(s) downloaded!`);
       router.push("/water");
