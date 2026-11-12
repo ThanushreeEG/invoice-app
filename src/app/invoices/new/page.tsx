@@ -8,7 +8,7 @@ import { formatCurrency, formatInvoiceAmount } from "@/lib/formatCurrency";
 import { amountInWords } from "@/lib/amountInWords";
 import { MONTHS } from "@/lib/constants";
 import SendConfirmModal from "@/components/SendConfirmModal";
-import { downloadPDFs } from "@/lib/downloadPDF";
+import ShareBillsDialog, { type ShareItem } from "@/components/ShareBillsDialog";
 
 interface Sender {
   id: string;
@@ -57,6 +57,7 @@ export default function NewInvoicePage() {
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState("");
   const [showSendModal, setShowSendModal] = useState(false);
+  const [shareItems, setShareItems] = useState<ShareItem[] | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -208,10 +209,10 @@ export default function NewInvoicePage() {
     setSendProgress("");
   };
 
-  const handleDownloadPDF = async () => {
+  const handleShare = async () => {
     setSending(true);
     try {
-      setSendProgress("Creating invoices...");
+      setSendProgress("Preparing to share...");
       const res = await fetch("/api/invoices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -238,19 +239,16 @@ export default function NewInvoicePage() {
       }
 
       const invoices = await res.json();
-      setSendProgress("Downloading PDFs...");
-
-      await downloadPDFs(
-        invoices.map((inv: { id: string; invoiceNumber: string }) => ({
+      setShareItems(
+        invoices.map((inv: { id: string; invoiceNumber: string; tenant: { name: string } }) => ({
+          id: inv.id,
+          label: `#${inv.invoiceNumber} · ${inv.tenant.name}`,
           url: `/api/invoices/${inv.id}/pdf`,
           filename: `Invoice-${inv.invoiceNumber}.pdf`,
         }))
       );
-
-      toast.success(`${invoices.length} invoice(s) saved & PDF(s) downloaded!`);
-      router.push("/invoices");
     } catch {
-      toast.error("Failed to download PDFs.");
+      toast.error("Failed to prepare invoices for sharing.");
     }
     setSending(false);
     setSendProgress("");
@@ -755,18 +753,18 @@ export default function NewInvoicePage() {
               Save Draft
             </button>
             <button
-              onClick={handleDownloadPDF}
+              onClick={handleShare}
               disabled={sending}
               className="px-6 py-4 bg-purple-700 text-white text-base sm:text-lg font-semibold rounded-xl hover:bg-purple-800 transition-colors disabled:opacity-50"
             >
-              {sending && sendProgress.includes("PDF") ? "Downloading..." : "Download PDF"}
+              {sending && sendProgress.startsWith("Preparing") ? "Preparing..." : "Share"}
             </button>
             <button
               onClick={() => setShowSendModal(true)}
               disabled={sending}
               className="col-span-2 sm:flex-1 py-4 bg-green-700 text-white text-base sm:text-lg font-semibold rounded-xl hover:bg-green-800 transition-colors disabled:opacity-50"
             >
-              {sending ? "Sending..." : "Send Invoice(s)"}
+              {sending && !sendProgress.startsWith("Preparing") ? "Sending..." : "Send via Email"}
             </button>
           </div>
         </>
@@ -776,10 +774,12 @@ export default function NewInvoicePage() {
         open={showSendModal}
         onClose={() => setShowSendModal(false)}
         onConfirm={handleSend}
-        title={`Send ${selected.length} Invoice(s)`}
+        title={`Send ${selected.length} Invoice(s) via Email`}
         recipientEmail={selected.map((s) => s.tenant.email).filter(Boolean).join(", ")}
         sending={sending}
       />
+
+      <ShareBillsDialog items={shareItems} onDone={() => router.push("/invoices")} />
     </div>
   );
 }

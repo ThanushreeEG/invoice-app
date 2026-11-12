@@ -8,6 +8,10 @@
 //   - on phones: open the system share sheet (Save to Files, WhatsApp, Mail…),
 //     which always returns to the app when dismissed;
 //   - elsewhere (or if sharing isn't allowed): trigger a blob download.
+//
+// Note: phones only open the share sheet if it is called right after a tap.
+// If the PDF has to be created/fetched first, fetch it with fetchPdf() ahead of
+// time and call shareFiles() directly from the button's click handler.
 
 export interface PdfFile {
   url: string;
@@ -18,7 +22,7 @@ function safeName(name: string) {
   return name.replace(/[\\/:*?"<>|]+/g, "-");
 }
 
-async function fetchPdf({ url, filename }: PdfFile): Promise<File> {
+export async function fetchPdf({ url, filename }: PdfFile): Promise<File> {
   const res = await fetch(url, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`Failed to fetch PDF (${res.status})`);
   const blob = await res.blob();
@@ -41,16 +45,15 @@ function isTouchDevice() {
   return typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
 }
 
-export async function downloadPDFs(items: PdfFile[]): Promise<void> {
-  const files = await Promise.all(items.map(fetchPdf));
-
+/** Opens the share sheet on phones (or downloads elsewhere). Returns false if the user cancelled. */
+export async function shareFiles(files: File[]): Promise<boolean> {
   if (isTouchDevice() && typeof navigator.share === "function" && navigator.canShare?.({ files })) {
     try {
       await navigator.share({ files });
-      return;
+      return true;
     } catch (err) {
       // User closed the share sheet: nothing more to do.
-      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (err instanceof DOMException && err.name === "AbortError") return false;
       // NotAllowedError etc. (e.g. gesture expired): fall back to download below.
     }
   }
@@ -59,6 +62,12 @@ export async function downloadPDFs(items: PdfFile[]): Promise<void> {
     blobDownload(file);
     if (files.length > 1) await new Promise((r) => setTimeout(r, 300));
   }
+  return true;
+}
+
+export async function downloadPDFs(items: PdfFile[]): Promise<void> {
+  const files = await Promise.all(items.map(fetchPdf));
+  await shareFiles(files);
 }
 
 export function downloadPDF(url: string, filename: string): Promise<void> {

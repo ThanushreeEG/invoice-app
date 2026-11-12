@@ -9,7 +9,6 @@ import SendConfirmModal from "@/components/SendConfirmModal";
 import ConfirmModal from "@/components/ConfirmModal";
 import StatusBadge from "@/components/StatusBadge";
 import type { Pagination } from "@/lib/types";
-import { downloadPDF } from "@/lib/downloadPDF";
 import PdfViewModal, { type PdfToView } from "@/components/PdfViewModal";
 import PageHeader from "@/components/PageHeader";
 import FilterBar from "@/components/FilterBar";
@@ -148,9 +147,6 @@ export default function InvoicesPage() {
     }
   };
 
-  const handleDownloadPDF = (id: string, invoiceNumber: string) => {
-    downloadPDF(`/api/invoices/${id}/pdf`, `Invoice-${invoiceNumber}.pdf`).catch(() => toast.error("Failed to download PDF."));
-  };
 
   if (loading) {
     return <LoadingState message="Loading invoices..." />;
@@ -234,17 +230,7 @@ export default function InvoicesPage() {
                         className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
                       >
                         View
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleDownloadPDF(invoice.id, invoice.invoiceNumber)
-                        }
-                        aria-label={`Share PDF for invoice ${invoice.invoiceNumber}`}
-                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-                      >
-                        Share
-                      </button>
-                      <button
+                      </button>                      <button
                         onClick={() => openSendModal(invoice)}
                         disabled={sendingId === invoice.id || (!invoice.tenant.email && !invoice.tenant.ccEmails)}
                         title={!invoice.tenant.email && !invoice.tenant.ccEmails ? "No email configured for this tenant" : undefined}

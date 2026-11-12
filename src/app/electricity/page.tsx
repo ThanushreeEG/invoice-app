@@ -9,7 +9,6 @@ import SendConfirmModal from "@/components/SendConfirmModal";
 import ConfirmModal from "@/components/ConfirmModal";
 import StatusBadge from "@/components/StatusBadge";
 import type { Pagination } from "@/lib/types";
-import { downloadPDF } from "@/lib/downloadPDF";
 import PdfViewModal, { type PdfToView } from "@/components/PdfViewModal";
 import PageHeader from "@/components/PageHeader";
 import FilterBar from "@/components/FilterBar";
@@ -146,9 +145,6 @@ export default function ElectricityBillsPage() {
     }
   };
 
-  const handleDownloadPDF = (id: string, tenantName: string, month: string, year: number) => {
-    downloadPDF(`/api/electricity/${id}/pdf`, `Electricity-Bill-${tenantName}-${month}-${year}.pdf`).catch(() => toast.error("Failed to download PDF."));
-  };
 
   if (loading) {
     return <LoadingState message="Loading electricity bills..." />;
@@ -231,15 +227,7 @@ export default function ElectricityBillsPage() {
                         className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
                       >
                         View
-                      </button>
-                      <button
-                        onClick={() => handleDownloadPDF(bill.id, bill.tenant.name, bill.month, bill.year)}
-                        aria-label={`Share PDF for ${bill.tenant.name} ${bill.month} ${bill.year}`}
-                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-                      >
-                        Share
-                      </button>
-                      <button
+                      </button>                      <button
                         onClick={() => openSendModal(bill)}
                         disabled={sendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
                         title={!bill.tenant.email && !bill.tenant.ccEmails ? "No email configured" : undefined}
