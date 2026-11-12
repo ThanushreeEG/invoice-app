@@ -923,7 +923,7 @@ export default function NewElectricityBillPage() {
         sending={sending}
       />
 
-      <ShareBillsDialog items={shareItems} onDone={() => router.push("/electricity")} />
+      <ShareBillsDialog items={shareItems} billType="electricity" onDone={() => router.push("/electricity")} />
     </div>
   );
 }

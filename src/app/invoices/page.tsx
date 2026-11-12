@@ -224,6 +224,7 @@ export default function InvoicesPage() {
                             url: `/api/invoices/${invoice.id}/pdf`,
                             filename: `Invoice-${invoice.invoiceNumber}.pdf`,
                             title: `Invoice #${invoice.invoiceNumber} · ${invoice.tenant.name}`,
+                            bill: { type: "invoice", id: invoice.id, status: invoice.status },
                           })
                         }
                         aria-label={`View PDF for invoice ${invoice.invoiceNumber}`}
@@ -278,7 +279,7 @@ export default function InvoicesPage() {
         variant="danger"
       />
 
-      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} />
+      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} onMarkedSent={() => fetchInvoices()} />
 
       <SendConfirmModal
         open={sendModal !== null}
