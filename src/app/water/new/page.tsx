@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { MONTHS } from "@/lib/constants";
 import SendConfirmModal from "@/components/SendConfirmModal";
-import { downloadPDFs } from "@/lib/downloadPDF";
+import ShareBillsDialog, { type ShareItem } from "@/components/ShareBillsDialog";
 
 interface Sender {
   id: string;
@@ -49,6 +49,7 @@ export default function NewWaterBillPage() {
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState("");
   const [showSendModal, setShowSendModal] = useState(false);
+  const [shareItems, setShareItems] = useState<ShareItem[] | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -183,10 +184,10 @@ export default function NewWaterBillPage() {
     setSendProgress("");
   };
 
-  const handleDownloadPDF = async () => {
+  const handleShare = async () => {
     setSending(true);
     try {
-      setSendProgress("Creating bills...");
+      setSendProgress("Preparing to share...");
       const res = await fetch("/api/water", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -202,19 +203,16 @@ export default function NewWaterBillPage() {
       }
 
       const bills = await res.json();
-      setSendProgress("Downloading PDFs...");
-
-      await downloadPDFs(
+      setShareItems(
         bills.map((bill: { id: string; tenant: { name: string } }) => ({
+          id: bill.id,
+          label: bill.tenant.name,
           url: `/api/water/${bill.id}/pdf`,
           filename: `Water-Bill-${bill.tenant.name}-${month}-${year}.pdf`,
         }))
       );
-
-      toast.success(`${bills.length} water bill(s) saved & PDF(s) downloaded!`);
-      router.push("/water");
     } catch {
-      toast.error("Failed to download PDFs.");
+      toast.error("Failed to prepare bills for sharing.");
     }
     setSending(false);
     setSendProgress("");
@@ -574,18 +572,18 @@ export default function NewWaterBillPage() {
               Save Draft
             </button>
             <button
-              onClick={handleDownloadPDF}
+              onClick={handleShare}
               disabled={sending}
               className="px-6 py-4 bg-purple-600 text-white text-lg font-semibold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50"
             >
-              {sending && sendProgress.includes("PDF") ? "Downloading..." : "Download PDF"}
+              {sending && sendProgress.startsWith("Preparing") ? "Preparing..." : "Share"}
             </button>
             <button
               onClick={() => setShowSendModal(true)}
               disabled={sending}
               className="flex-1 py-4 bg-green-600 text-white text-lg font-semibold rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50"
             >
-              {sending ? "Sending..." : "Send Bill(s)"}
+              {sending && !sendProgress.startsWith("Preparing") ? "Sending..." : "Send via Email"}
             </button>
           </div>
         </>
@@ -595,10 +593,12 @@ export default function NewWaterBillPage() {
         open={showSendModal}
         onClose={() => setShowSendModal(false)}
         onConfirm={handleSend}
-        title={`Send ${selected.length} Water Bill(s)`}
+        title={`Send ${selected.length} Water Bill(s) via Email`}
         recipientEmail={selected.map((s) => s.tenant.email).filter(Boolean).join(", ")}
         sending={sending}
       />
+
+      <ShareBillsDialog items={shareItems} onDone={() => router.push("/water")} />
     </div>
   );
 }
