@@ -28,8 +28,8 @@ export async function GET(request: Request) {
   if (year) where.year = parseInt(year);
   if (search) {
     where.OR = [
-      { tenant: { name: { contains: search } } },
-      { month: { contains: search } },
+      { tenant: { name: { contains: search, mode: "insensitive" } } },
+      { month: { contains: search, mode: "insensitive" } },
     ];
   }
 

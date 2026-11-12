@@ -221,6 +221,7 @@ export default function ElectricityBillsPage() {
                             url: `/api/electricity/${bill.id}/pdf`,
                             filename: `Electricity-Bill-${bill.tenant.name}-${bill.month}-${bill.year}.pdf`,
                             title: `EB Bill · ${bill.tenant.name} · ${bill.month} ${bill.year}`,
+                            bill: { type: "electricity", id: bill.id, status: bill.status },
                           })
                         }
                         aria-label={`View PDF for ${bill.tenant.name} ${bill.month} ${bill.year}`}
@@ -275,7 +276,7 @@ export default function ElectricityBillsPage() {
         variant="danger"
       />
 
-      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} />
+      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} onMarkedSent={() => fetchBills()} />
 
       <SendConfirmModal
         open={sendModal !== null}

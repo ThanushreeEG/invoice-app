@@ -779,7 +779,7 @@ export default function NewInvoicePage() {
         sending={sending}
       />
 
-      <ShareBillsDialog items={shareItems} onDone={() => router.push("/invoices")} />
+      <ShareBillsDialog items={shareItems} billType="invoice" onDone={() => router.push("/invoices")} />
     </div>
   );
 }

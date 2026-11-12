@@ -173,6 +173,7 @@ export default function WaterBillsPage() {
                           url: `/api/water/${bill.id}/pdf`,
                           filename: `Water-Bill-${bill.tenant.name}-${bill.month}-${bill.year}.pdf`,
                           title: `Water Bill · ${bill.tenant.name} · ${bill.month} ${bill.year}`,
+                          bill: { type: "water", id: bill.id, status: bill.status },
                         })}
                         aria-label={`View PDF for water bill ${bill.month} ${bill.year}`}
                         className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors">View</button>                      <button onClick={() => openSendModal(bill)}
@@ -213,7 +214,7 @@ export default function WaterBillsPage() {
         variant="danger"
       />
 
-      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} />
+      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} onMarkedSent={() => fetchBills()} />
 
       <SendConfirmModal
         open={sendModal !== null}

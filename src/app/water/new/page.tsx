@@ -598,7 +598,7 @@ export default function NewWaterBillPage() {
         sending={sending}
       />
 
-      <ShareBillsDialog items={shareItems} onDone={() => router.push("/water")} />
+      <ShareBillsDialog items={shareItems} billType="water" onDone={() => router.push("/water")} />
     </div>
   );
 }

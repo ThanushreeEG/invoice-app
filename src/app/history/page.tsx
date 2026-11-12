@@ -394,7 +394,7 @@ export default function HistoryPage() {
                       <td className="px-4 py-3 text-center"><StatusBadge status={inv.status} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => setViewPdf({ url: `/api/invoices/${inv.id}/pdf`, filename: `Invoice-${inv.invoiceNumber}.pdf`, title: `Invoice #${inv.invoiceNumber} · ${inv.tenant.name}` })} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">View</button>                          <button onClick={() => openInvSendModal(inv)} disabled={invSendingId === inv.id || (!inv.tenant.email && !inv.tenant.ccEmails)}
+                          <button onClick={() => setViewPdf({ url: `/api/invoices/${inv.id}/pdf`, filename: `Invoice-${inv.invoiceNumber}.pdf`, title: `Invoice #${inv.invoiceNumber} · ${inv.tenant.name}`, bill: { type: "invoice", id: inv.id, status: inv.status } })} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">View</button>                          <button onClick={() => openInvSendModal(inv)} disabled={invSendingId === inv.id || (!inv.tenant.email && !inv.tenant.ccEmails)}
                             className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50">
                             {invSendingId === inv.id ? "..." : "Send"}
                           </button>
@@ -460,7 +460,7 @@ export default function HistoryPage() {
                       <td className="px-4 py-3 text-center"><StatusBadge status={bill.status} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => setViewPdf({ url: `/api/electricity/${bill.id}/pdf`, filename: `EB-Bill-${bill.tenant.name}-${bill.month}-${bill.year}.pdf`, title: `EB Bill · ${bill.tenant.name} · ${bill.month} ${bill.year}` })} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">View</button>                          <button onClick={() => openEbSendModal(bill)} disabled={ebSendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
+                          <button onClick={() => setViewPdf({ url: `/api/electricity/${bill.id}/pdf`, filename: `EB-Bill-${bill.tenant.name}-${bill.month}-${bill.year}.pdf`, title: `EB Bill · ${bill.tenant.name} · ${bill.month} ${bill.year}`, bill: { type: "electricity", id: bill.id, status: bill.status } })} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">View</button>                          <button onClick={() => openEbSendModal(bill)} disabled={ebSendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
                             className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50">
                             {ebSendingId === bill.id ? "..." : "Send"}
                           </button>
@@ -524,7 +524,7 @@ export default function HistoryPage() {
                       <td className="px-4 py-3 text-center"><StatusBadge status={bill.status} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => setViewPdf({ url: `/api/water/${bill.id}/pdf`, filename: `Water-Bill-${bill.tenant.name}-${bill.month}-${bill.year}.pdf`, title: `Water Bill · ${bill.tenant.name} · ${bill.month} ${bill.year}` })} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">View</button>                          <button onClick={() => openWbSendModal(bill)} disabled={wbSendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
+                          <button onClick={() => setViewPdf({ url: `/api/water/${bill.id}/pdf`, filename: `Water-Bill-${bill.tenant.name}-${bill.month}-${bill.year}.pdf`, title: `Water Bill · ${bill.tenant.name} · ${bill.month} ${bill.year}`, bill: { type: "water", id: bill.id, status: bill.status } })} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">View</button>                          <button onClick={() => openWbSendModal(bill)} disabled={wbSendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
                             className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50">
                             {wbSendingId === bill.id ? "..." : "Send"}
                           </button>
@@ -556,7 +556,7 @@ export default function HistoryPage() {
         variant="danger"
       />
 
-      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} />
+      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} onMarkedSent={() => { fetchInvoices(); fetchBills(); fetchWaterBills(); }} />
 
       <SendConfirmModal
         open={sendModal !== null}
