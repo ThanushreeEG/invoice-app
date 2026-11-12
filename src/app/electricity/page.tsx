@@ -10,6 +10,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import StatusBadge from "@/components/StatusBadge";
 import type { Pagination } from "@/lib/types";
 import { downloadPDF } from "@/lib/downloadPDF";
+import PdfViewModal, { type PdfToView } from "@/components/PdfViewModal";
 import PageHeader from "@/components/PageHeader";
 import FilterBar from "@/components/FilterBar";
 import EmptyState from "@/components/EmptyState";
@@ -47,6 +48,7 @@ export default function ElectricityBillsPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [viewPdf, setViewPdf] = useState<PdfToView | null>(null);
   const [sendModal, setSendModal] = useState<{
     id: string;
     pdfUrl: string;
@@ -218,11 +220,24 @@ export default function ElectricityBillsPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button
+                        onClick={() =>
+                          setViewPdf({
+                            url: `/api/electricity/${bill.id}/pdf`,
+                            filename: `Electricity-Bill-${bill.tenant.name}-${bill.month}-${bill.year}.pdf`,
+                            title: `EB Bill · ${bill.tenant.name} · ${bill.month} ${bill.year}`,
+                          })
+                        }
+                        aria-label={`View PDF for ${bill.tenant.name} ${bill.month} ${bill.year}`}
+                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                      >
+                        View
+                      </button>
+                      <button
                         onClick={() => handleDownloadPDF(bill.id, bill.tenant.name, bill.month, bill.year)}
-                        aria-label={`Download PDF for ${bill.tenant.name} ${bill.month} ${bill.year}`}
+                        aria-label={`Share PDF for ${bill.tenant.name} ${bill.month} ${bill.year}`}
                         className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                       >
-                        PDF
+                        Share
                       </button>
                       <button
                         onClick={() => openSendModal(bill)}
@@ -271,6 +286,8 @@ export default function ElectricityBillsPage() {
         confirmLabel="Delete"
         variant="danger"
       />
+
+      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} />
 
       <SendConfirmModal
         open={sendModal !== null}
