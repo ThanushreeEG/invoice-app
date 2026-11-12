@@ -8,6 +8,7 @@ import { formatCurrency, formatInvoiceAmount } from "@/lib/formatCurrency";
 import { amountInWords } from "@/lib/amountInWords";
 import { MONTHS } from "@/lib/constants";
 import SendConfirmModal from "@/components/SendConfirmModal";
+import { downloadPDFs } from "@/lib/downloadPDF";
 
 interface Sender {
   id: string;
@@ -239,14 +240,12 @@ export default function NewInvoicePage() {
       const invoices = await res.json();
       setSendProgress("Downloading PDFs...");
 
-      for (const inv of invoices) {
-        const link = document.createElement("a");
-        link.href = `/api/invoices/${inv.id}/pdf`;
-        link.download = `Invoice-${inv.invoiceNumber}.pdf`;
-        link.click();
-        // Small delay between downloads so browser handles them
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
+      await downloadPDFs(
+        invoices.map((inv: { id: string; invoiceNumber: string }) => ({
+          url: `/api/invoices/${inv.id}/pdf`,
+          filename: `Invoice-${inv.invoiceNumber}.pdf`,
+        }))
+      );
 
       toast.success(`${invoices.length} invoice(s) saved & PDF(s) downloaded!`);
       router.push("/invoices");

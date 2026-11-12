@@ -86,7 +86,8 @@ export default function WaterBillsPage() {
       if (res.ok) { toast.success("Water bill sent!"); fetchBills(); } else { toast.error(data.error || "Failed to send."); }
     } catch { toast.error("Failed to send water bill."); }
     setSendingId(null);
-    setSendModal(null);
+    // Only close the dialog if it still shows this bill (the user may have closed it and opened another).
+    setSendModal((m) => (m?.id === id ? null : m));
   };
 
   const handleDelete = (id: string) => {
@@ -105,7 +106,7 @@ export default function WaterBillsPage() {
   };
 
   const downloadPDFFile = (id: string, tenant: string, month: string, year: number) => {
-    downloadPDFUtil(`/api/water/${id}/pdf`, `Water-Bill-${tenant}-${month}-${year}.pdf`);
+    downloadPDFUtil(`/api/water/${id}/pdf`, `Water-Bill-${tenant}-${month}-${year}.pdf`).catch(() => toast.error("Failed to download PDF."));
   };
 
   return (
@@ -219,7 +220,7 @@ export default function WaterBillsPage() {
         title={sendModal?.title || ""}
         recipientEmail={sendModal?.email || ""}
         ccEmails={sendModal?.ccEmails}
-        sending={sendingId !== null}
+        sending={sendingId !== null && sendingId === sendModal?.id}
       />
     </div>
   );
