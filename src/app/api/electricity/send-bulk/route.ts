@@ -64,6 +64,7 @@ export async function POST(request: Request) {
         senderName: bill.sender.name,
         buildingName: bill.building?.name || "",
         senderAddress: bill.building?.address || "",
+        senderSignature: bill.sender.signature || undefined,
         tenantName: bill.tenant.name,
         tenantAddress: bill.tenant.propertyAddress,
         month: bill.month,
