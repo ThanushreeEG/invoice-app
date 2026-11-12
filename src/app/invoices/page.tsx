@@ -10,6 +10,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import StatusBadge from "@/components/StatusBadge";
 import type { Pagination } from "@/lib/types";
 import { downloadPDF } from "@/lib/downloadPDF";
+import PdfViewModal, { type PdfToView } from "@/components/PdfViewModal";
 import PageHeader from "@/components/PageHeader";
 import FilterBar from "@/components/FilterBar";
 import EmptyState from "@/components/EmptyState";
@@ -49,6 +50,7 @@ export default function InvoicesPage() {
   const [yearFilter, setYearFilter] = useState("");
   const [periods, setPeriods] = useState<{ month: string; year: number }[]>([]);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [viewPdf, setViewPdf] = useState<PdfToView | null>(null);
   const [sendModal, setSendModal] = useState<{
     id: string;
     pdfUrl: string;
@@ -222,12 +224,25 @@ export default function InvoicesPage() {
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() =>
+                          setViewPdf({
+                            url: `/api/invoices/${invoice.id}/pdf`,
+                            filename: `Invoice-${invoice.invoiceNumber}.pdf`,
+                            title: `Invoice #${invoice.invoiceNumber} · ${invoice.tenant.name}`,
+                          })
+                        }
+                        aria-label={`View PDF for invoice ${invoice.invoiceNumber}`}
+                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() =>
                           handleDownloadPDF(invoice.id, invoice.invoiceNumber)
                         }
-                        aria-label={`Download PDF for invoice ${invoice.invoiceNumber}`}
+                        aria-label={`Share PDF for invoice ${invoice.invoiceNumber}`}
                         className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                       >
-                        PDF
+                        Share
                       </button>
                       <button
                         onClick={() => openSendModal(invoice)}
@@ -276,6 +291,8 @@ export default function InvoicesPage() {
         confirmLabel="Delete"
         variant="danger"
       />
+
+      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} />
 
       <SendConfirmModal
         open={sendModal !== null}

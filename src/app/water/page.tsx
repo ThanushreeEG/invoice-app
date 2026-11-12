@@ -11,6 +11,7 @@ import StatusBadge from "@/components/StatusBadge";
 import { formatDate } from "@/lib/constants";
 import type { Pagination } from "@/lib/types";
 import { downloadPDF as downloadPDFUtil } from "@/lib/downloadPDF";
+import PdfViewModal, { type PdfToView } from "@/components/PdfViewModal";
 import PageHeader from "@/components/PageHeader";
 import FilterBar from "@/components/FilterBar";
 import EmptyState from "@/components/EmptyState";
@@ -42,6 +43,7 @@ export default function WaterBillsPage() {
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [viewPdf, setViewPdf] = useState<PdfToView | null>(null);
   const [sendModal, setSendModal] = useState<{
     id: string;
     pdfUrl: string;
@@ -171,9 +173,16 @@ export default function WaterBillsPage() {
                       {formatCurrency(bill.netPayable)}
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      <button onClick={() => setViewPdf({
+                          url: `/api/water/${bill.id}/pdf`,
+                          filename: `Water-Bill-${bill.tenant.name}-${bill.month}-${bill.year}.pdf`,
+                          title: `Water Bill · ${bill.tenant.name} · ${bill.month} ${bill.year}`,
+                        })}
+                        aria-label={`View PDF for water bill ${bill.month} ${bill.year}`}
+                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors">View</button>
                       <button onClick={() => downloadPDFFile(bill.id, bill.tenant.name, bill.month, bill.year)}
-                        aria-label={`Download PDF for water bill ${bill.month} ${bill.year}`}
-                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">PDF</button>
+                        aria-label={`Share PDF for water bill ${bill.month} ${bill.year}`}
+                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">Share</button>
                       <button onClick={() => openSendModal(bill)}
                         disabled={sendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
                         title={!bill.tenant.email && !bill.tenant.ccEmails ? "No email configured for this tenant" : undefined}
@@ -211,6 +220,8 @@ export default function WaterBillsPage() {
         confirmLabel="Delete"
         variant="danger"
       />
+
+      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} />
 
       <SendConfirmModal
         open={sendModal !== null}

@@ -10,6 +10,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import StatusBadge from "@/components/StatusBadge";
 import { STATUS_OPTIONS, MONTHS as MONTH_NAMES, MONTH_SHORT, formatDate } from "@/lib/constants";
 import { downloadPDF } from "@/lib/downloadPDF";
+import PdfViewModal, { type PdfToView } from "@/components/PdfViewModal";
 
 interface Invoice {
   id: string;
@@ -94,6 +95,9 @@ export default function HistoryPage() {
   const [wbStatus, setWbStatus] = useState("");
   const [wbLoading, setWbLoading] = useState(true);
   const [wbSendingId, setWbSendingId] = useState<string | null>(null);
+
+  // In-app PDF viewer state
+  const [viewPdf, setViewPdf] = useState<PdfToView | null>(null);
 
   // Delete confirm state
   const [deleteTarget, setDeleteTarget] = useState<{ type: "invoice" | "eb" | "water"; id: string } | null>(null);
@@ -399,7 +403,8 @@ export default function HistoryPage() {
                       <td className="px-4 py-3 text-center"><StatusBadge status={inv.status} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => downloadInvPDF(inv.id, inv.invoiceNumber)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">PDF</button>
+                          <button onClick={() => setViewPdf({ url: `/api/invoices/${inv.id}/pdf`, filename: `Invoice-${inv.invoiceNumber}.pdf`, title: `Invoice #${inv.invoiceNumber} · ${inv.tenant.name}` })} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">View</button>
+                          <button onClick={() => downloadInvPDF(inv.id, inv.invoiceNumber)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">Share</button>
                           <button onClick={() => openInvSendModal(inv)} disabled={invSendingId === inv.id || (!inv.tenant.email && !inv.tenant.ccEmails)}
                             className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50">
                             {invSendingId === inv.id ? "..." : "Send"}
@@ -466,7 +471,8 @@ export default function HistoryPage() {
                       <td className="px-4 py-3 text-center"><StatusBadge status={bill.status} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => downloadEbPDF(bill.id, bill.tenant.name, bill.month, bill.year)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">PDF</button>
+                          <button onClick={() => setViewPdf({ url: `/api/electricity/${bill.id}/pdf`, filename: `EB-Bill-${bill.tenant.name}-${bill.month}-${bill.year}.pdf`, title: `EB Bill · ${bill.tenant.name} · ${bill.month} ${bill.year}` })} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">View</button>
+                          <button onClick={() => downloadEbPDF(bill.id, bill.tenant.name, bill.month, bill.year)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">Share</button>
                           <button onClick={() => openEbSendModal(bill)} disabled={ebSendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
                             className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50">
                             {ebSendingId === bill.id ? "..." : "Send"}
@@ -531,7 +537,8 @@ export default function HistoryPage() {
                       <td className="px-4 py-3 text-center"><StatusBadge status={bill.status} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => downloadWbPDF(bill.id, bill.tenant.name, bill.month, bill.year)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">PDF</button>
+                          <button onClick={() => setViewPdf({ url: `/api/water/${bill.id}/pdf`, filename: `Water-Bill-${bill.tenant.name}-${bill.month}-${bill.year}.pdf`, title: `Water Bill · ${bill.tenant.name} · ${bill.month} ${bill.year}` })} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100">View</button>
+                          <button onClick={() => downloadWbPDF(bill.id, bill.tenant.name, bill.month, bill.year)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">Share</button>
                           <button onClick={() => openWbSendModal(bill)} disabled={wbSendingId === bill.id || (!bill.tenant.email && !bill.tenant.ccEmails)}
                             className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50">
                             {wbSendingId === bill.id ? "..." : "Send"}
@@ -563,6 +570,8 @@ export default function HistoryPage() {
         confirmLabel="Delete"
         variant="danger"
       />
+
+      <PdfViewModal pdf={viewPdf} onClose={() => setViewPdf(null)} />
 
       <SendConfirmModal
         open={sendModal !== null}
